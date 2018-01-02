@@ -6,11 +6,17 @@ import java.net.URL;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
-public class RpkiFeeder {
+public class RpkiFeeder implements Runnable {
     private static RpkiFeeder instance = null;
     private RpkiValidatorControlThread rpkiValidatorControlThread = null;
-    private ScheduledExecutorService scheduledThreadPool;
+    private ScheduledExecutorService scheduledThreadPool = null;
+    private Lock aLock = new ReentrantLock();
+    private Condition condVar = aLock.newCondition();
+    private Thread thread_handle = null;
 
     private RpkiFeeder(){
 
@@ -23,11 +29,17 @@ public class RpkiFeeder {
         rpkiValidatorControlThread.start();
         //TODO: check that this started succesfuly
         scheduledThreadPool.scheduleAtFixedRate(new RpkiRepoDownloader(), 500, 60, TimeUnit.MINUTES);
+        System.out.println("Starting ");
+        if (thread_handle == null) {
+            thread_handle = new Thread(this);
+            thread_handle.start();
+        }
     }
 
     public void close() {
         scheduledThreadPool.shutdown();
         rpkiValidatorControlThread.stop();
+        condVar.signal();
     }
 
     public static RpkiFeeder getInstance() {
@@ -35,5 +47,17 @@ public class RpkiFeeder {
             instance = new RpkiFeeder();
         }
         return instance;
+    }
+
+    @Override
+    public void run() {
+        aLock.lock();
+        try {
+            condVar.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }finally {
+            aLock.unlock();
+        }
     }
 }

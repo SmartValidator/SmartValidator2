@@ -74,3 +74,4 @@ fabric.properties
 .idea/
 smartvalidator2.iml
 target/
+src/test/
