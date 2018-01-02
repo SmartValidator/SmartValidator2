@@ -1,5 +1,6 @@
 package modules.dataFeeder.rpkiFeeder;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
@@ -25,7 +26,7 @@ public class RpkiRepoDownloader implements Runnable {
                         // Obtain response
                         HttpResponse<Buffer> response = ar.result();
                         System.out.println("Got HTTP response body");
-                        System.out.println(response.body().encodePrettily());
+                        System.out.println(response.body());
                     } else {
                         System.out.println("Something went wrong " + ar.cause().getMessage());
                     }
