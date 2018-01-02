@@ -24,7 +24,7 @@ public class RpkiFeeder implements Runnable {
     }
 
     public void start() {
-        URL url = getClass().getResource("libs/rpki-validator-3/rpki-validator-3.0.0-SNAPSHOT.jar");
+        URL url = getClass().getResource("/libs/rpki-validator-3/rpki-validator-3.0.0-SNAPSHOT.jar");
         rpkiValidatorControlThread = new RpkiValidatorControlThread(url.getPath());
         rpkiValidatorControlThread.start();
         //TODO: check that this started succesfuly

@@ -22,7 +22,7 @@
 
         <resources>
             <resource>
-                <directory>${project.basedir}/src/main/resources/libs/</directory>
+                <directory>/src/main/resources</directory>
             </resource>
         </resources>
     </build>
