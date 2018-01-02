@@ -11,7 +11,7 @@ public class Feeder {
     private Feeder() {
     }
 
-    private void start(){
+    public void start(){
         RpkiFeeder.getInstance().start();
 
     }
