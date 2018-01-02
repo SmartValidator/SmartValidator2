@@ -1,12 +1,12 @@
-package modules.dataFeeder;
+package modules.dataFeeder.rpkiFeeder;
 
 import java.io.IOException;
 
-    public class RpkiFeederControlThread implements Runnable {
+    public class RpkiValidatorControlThread implements Runnable {
         public Thread thread_handle;
         private String rpki_validator_jar_path;
 
-        RpkiFeederControlThread(String rpki_validator_jar_path){
+        public RpkiValidatorControlThread(String rpki_validator_jar_path){
 
             this.rpki_validator_jar_path = rpki_validator_jar_path;
         }
