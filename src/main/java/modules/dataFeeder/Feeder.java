@@ -10,7 +10,7 @@ public class Feeder {
     }
 
     public void start() {
-        URL url = getClass().getResource("/rpki-validator-3/rpki-validator-3.0.0-SNAPSHOT.jar");
+        URL url = getClass().getResource("libs/rpki-validator-3/rpki-validator-3.0.0-SNAPSHOT.jar");
         rpkiFeederControlThread = new RpkiFeederControlThread(url.getPath());
         rpkiFeederControlThread.start();
     }

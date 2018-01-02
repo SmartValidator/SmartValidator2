@@ -16,9 +16,7 @@ import java.io.IOException;
             try {
                 Process p = pb.start();
                 p.waitFor();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } catch (InterruptedException e) {
+            } catch (IOException | InterruptedException e) {
                 e.printStackTrace();
             }
         }

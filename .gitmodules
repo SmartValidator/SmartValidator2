@@ -1,0 +1,3 @@
+[submodule "src/main/resources/libs/Bmp"]
+	path = src/main/resources/libs/Bmp
+	url = https://github.com/SmartValidator/yabmp
