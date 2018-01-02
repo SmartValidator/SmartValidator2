@@ -25,11 +25,11 @@ public class RpkiFeeder implements Runnable {
 
     public void start() {
         URL url = getClass().getResource("/libs/rpki-validator-3/rpki-validator-3.0.0-SNAPSHOT.jar");
-        rpkiValidatorControlThread = new RpkiValidatorControlThread(url.getPath());
-        rpkiValidatorControlThread.start();
+//        rpkiValidatorControlThread = new RpkiValidatorControlThread(url.getPath());
+//        rpkiValidatorControlThread.start();
         //TODO: check that this started succesfuly
-        scheduledThreadPool.scheduleAtFixedRate(new RpkiRepoDownloader(), 500, 60, TimeUnit.MINUTES);
-        System.out.println("Starting ");
+        scheduledThreadPool.scheduleAtFixedRate(new RpkiRepoDownloader(), 0, 5, TimeUnit.MINUTES);
+        System.out.println("Starting rpki feeder scheduled ");
         if (thread_handle == null) {
             thread_handle = new Thread(this);
             thread_handle.start();

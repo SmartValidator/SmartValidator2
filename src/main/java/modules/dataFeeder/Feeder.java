@@ -1,5 +1,6 @@
 package modules.dataFeeder;
 
+import modules.dataFeeder.bmpFeeder.BmpFeeder;
 import modules.dataFeeder.rpkiFeeder.RpkiFeeder;
 import modules.dataFeeder.rpkiFeeder.RpkiValidatorControlThread;
 
@@ -13,6 +14,7 @@ public class Feeder {
 
     public void start(){
         RpkiFeeder.getInstance().start();
+        BmpFeeder.getInstance().start();
 
     }
 
