@@ -10,17 +10,6 @@ public class ConflictSeeker {
 
     private Connection connection;
     private List<Roa> validated_roas;
-    private Map<Integer, List<RoaEntry>> validatedAnnouncements;
-    public class RoaEntry{
-        private int roa_id;
-        private int validity;
-
-        public RoaEntry(int roa_id, int validity){
-            this.roa_id = roa_id;
-            this.validity = validity;
-
-        }
-    }
 
     public class Roa{
         private int roa_id;
@@ -84,18 +73,6 @@ public class ConflictSeeker {
             System.out.println("Failed to make connection!");
         }
     }
-    private void updateValidationMap(RoaEntry entry, int key){
-        if(validatedAnnouncements.get(key) == null){
-            List<RoaEntry> newList = new ArrayList<>();
-            newList.add(entry);
-            validatedAnnouncements.put(key,newList);
-        }else{
-            List<RoaEntry> curList = validatedAnnouncements.get(key);
-            curList.add(entry);
-            validatedAnnouncements.put(key, curList);
-        }
-
-    }
 
     private boolean checkAsn(Roa curRoa,ResultSet rs) throws Exception{
         if(curRoa.asn.equals(rs.getString(2)))
@@ -125,12 +102,6 @@ public class ConflictSeeker {
 
             ResultSet rs;
             int roas_counter = 0;
-            String insertTableSQL = "INSERT INTO validated_roas_verified_announcements"
-                    + "(verified_announcement_id, validated_roa_id, route_validity) VALUES"
-                    + "(?,?,?)";
-            String updatedTableSQL = "UPDATE INTO validated_roas_verified_announcements"
-                    + "(verified_announcement_id, validated_roa_id, route_validity, updated_at) VALUES"
-                    + "(?,?,?,?)";
             String papo = "INSERT INTO validated_roas_verified_announcements(verified_announcement_id, validated_roa_id, route_validity)" +
                     " VALUES" + "(?, ?, ?)";
             PreparedStatement ps = connection.prepareStatement(papo);
@@ -138,38 +109,19 @@ public class ConflictSeeker {
                 if(roas_counter % 1000 == 0 && roas_counter > 0){
                     System.out.format("Elapsed through %d Roas .\n", roas_counter);
                 }
-//                rs = connection.createStatement().executeQuery("SELECT * FROM invalid_announcements('" + roa.prefix+ "')");
-//                rs = connection.createStatement().executeQuery("SELECT * FROM invalid_length_announcements('" + roa.prefix+ "')");
-//                rs = connection.createStatement().executeQuery("SELECT * FROM valid_announcements('" + roa.prefix+ "')");
                 rs = connection.createStatement().executeQuery("SELECT * FROM announcements WHERE prefix <<= inet '" + roa.prefix+ "'");
                 while (rs.next() ) {
-//                    String key = rs.getString(2)+":"+rs.getString(3);
                     int key = rs.getInt(1);
+                    ps.setInt(1, key);
+                    ps.setInt(2, roa.roa_id);
                     if(!checkAsn(roa,rs)){
-//                        updateValidationMap(new RoaEntry(roa.roa_id,2),key);
-//                        isConflictExist(roa.roa_id, key,1);
-                        ps.setInt(1, key);
-                        ps.setInt(2, roa.roa_id);
                         ps.setInt(3, 1);
-                        ps.addBatch();
-//                        ps.clearParameters();
                     }else if(!checkLength(roa,rs)){
-//                        updateValidationMap(new RoaEntry(roa.roa_id,1),key);
-//                        isConflictExist(roa.roa_id, key,2);
-                        ps.setInt(1, key);
-                        ps.setInt(2, roa.roa_id);
                         ps.setInt(3, 2);
-                        ps.addBatch();
-//                        ps.clearParameters();
                     }else{
-//                        updateValidationMap(new RoaEntry(roa.roa_id,0),key);
-//                        isConflictExist(roa.roa_id, key,0);
-                        ps.setInt(1, key);
-                        ps.setInt(2, roa.roa_id);
                         ps.setInt(3, 0);
-                        ps.addBatch();
-//                        ps.clearParameters();
                     }
+                    ps.addBatch();
                 }
                 roas_counter += 1;
             }
@@ -192,30 +144,6 @@ public class ConflictSeeker {
             while (rs.next()){
                 validated_roas.add(new Roa(rs.getInt(1),rs.getString(2),rs.getString(3),rs.getString(4)));
             }
-//            ResultSetMetaData rsmd = rs.getMetaData();
-//            DatabaseMetaData metadata = connection.getMetaData();
-//
-//            // Specify the type of object; in this case we want tables
-//
-//            String[] types = {"TABLE"};
-//
-//            ResultSet resultSet = metadata.getTables(null, null, "%", types);
-//
-//
-//            while (resultSet.next()) {
-//
-//                String tableName = resultSet.getString(3);
-//
-//                String tableCatalog = resultSet.getString(1);
-//
-//                String tableSchema = resultSet.getString(2);
-//
-//
-//                System.out.println("Table : " + tableName + "nCatalog : " + tableCatalog + "nSchema : " + tableSchema);
-////
-////
-////            }
-//            }
         } catch (Exception e) {
             System.out.println(e.getMessage());
 
@@ -237,11 +165,10 @@ public class ConflictSeeker {
     private void runConflictSeeker(){
         try {
             validated_roas = new ArrayList<>();
-            validatedAnnouncements = new HashMap<>();
             this.getRoas();
             this.dropAndCreateTable();
-//            PreparedStatement ps = this.detectOverlap();
-//            ps.executeBatch();
+            PreparedStatement ps = this.detectOverlap();
+            ps.executeBatch();
         }catch(Exception e){
             System.out.println(e.getMessage());
         }
