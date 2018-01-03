@@ -5,6 +5,7 @@ import modules.dataFeeder.Feeder;
 import java.net.URL;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -23,17 +24,18 @@ public class RpkiFeeder implements Runnable {
         scheduledThreadPool = Executors.newScheduledThreadPool(1);
     }
 
-    public void start() {
+    public ScheduledFuture<?> start() {
         URL url = getClass().getResource("/libs/rpki-validator-3/rpki-validator-3.0.0-SNAPSHOT.jar");
-//        rpkiValidatorControlThread = new RpkiValidatorControlThread(url.getPath());
-//        rpkiValidatorControlThread.start();
+        rpkiValidatorControlThread = new RpkiValidatorControlThread(url.getPath());
+        rpkiValidatorControlThread.start();
         //TODO: check that this started succesfuly
-        scheduledThreadPool.scheduleAtFixedRate(new RpkiRepoDownloader(), 0, 5, TimeUnit.MINUTES);
+        ScheduledFuture<?> rpkiScheduledUpdateFuture = scheduledThreadPool.scheduleAtFixedRate(new RpkiRepoDownloader(), 0, 5, TimeUnit.MINUTES);
         System.out.println("Starting rpki feeder scheduled ");
         if (thread_handle == null) {
             thread_handle = new Thread(this);
             thread_handle.start();
         }
+        return rpkiScheduledUpdateFuture;
     }
 
     public void close() {
