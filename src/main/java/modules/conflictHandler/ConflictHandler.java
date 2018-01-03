@@ -15,21 +15,21 @@ public class ConflictHandler {
     private Connection connection;
 
     public class Overlap {
-        private VerifiedAnnouncement announcement;
+        private Announcement announcement;
         private List<RoaEntry> roas;
 
-        public Overlap(VerifiedAnnouncement announcement, List<RoaEntry> roas){
+        public Overlap(Announcement announcement, List<RoaEntry> roas){
             this.announcement = announcement;
             this.roas = roas;
         }
 
-        public Overlap(VerifiedAnnouncement announcement, RoaEntry roaEntry){
+        public Overlap(Announcement announcement, RoaEntry roaEntry){
             this.announcement = announcement;
             this.roas = new ArrayList<>();
             this.roas.add(roaEntry);
         }
 
-        public VerifiedAnnouncement getAnnouncement(){
+        public Announcement getAnnouncement(){
             return this.announcement;
         }
 
@@ -183,6 +183,10 @@ public class ConflictHandler {
         public int getId(){
             return id;
         }
+
+        public Timestamp getCreated_at() {
+            return created_at;
+        }
     }
 
     public ConflictHandler( String database, String user, String password ){
@@ -327,7 +331,7 @@ public class ConflictHandler {
 
             int previousAnnouncement_id;
             int announcement_id = rs.getInt(2);
-            VerifiedAnnouncement announcement = announcements.get(announcement_id - 1);
+            Announcement announcement = announcements.get(announcement_id - 1);
 
             int roa_id = rs.getInt(3);
             Roa roa = roas.get(roa_id - 1);
@@ -400,7 +404,7 @@ public class ConflictHandler {
             Statement stmt = connection.createStatement();
             int wl = stmt.executeUpdate("DELETE FROM validated_roas WHERE whitelisted = true");
             for( int i = 0; i < overlaps.size(); i++ ){
-                VerifiedAnnouncement announcement = overlaps.get(i).getAnnouncement();
+                Announcement announcement = overlaps.get(i).getAnnouncement();
                 if((now - announcement.getCreated_at().getTime()) / DAY > days){
                     for(int j = 0; j < overlaps.get(i).getRoaIds().length; j++){
                         int roaId = overlaps.get(i).getRoaIds()[j];
@@ -421,7 +425,7 @@ public class ConflictHandler {
             Statement stmt = connection.createStatement();
             int wl = stmt.executeUpdate("DELETE FROM validated_roas WHERE whitelisted = true");
             for( int i = 0; i < overlaps.size(); i++ ){
-                VerifiedAnnouncement announcement = overlaps.get(i).getAnnouncement();
+                Announcement announcement = overlaps.get(i).getAnnouncement();
                 if((now - announcement.getCreated_at().getTime()) / DAY > days){
                     for(int j = 0; j < overlaps.get(i).getRoaIds().length; j++){
                         int roaId = overlaps.get(i).getRoaIds()[j];
