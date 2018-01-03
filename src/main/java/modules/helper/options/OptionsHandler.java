@@ -6,7 +6,6 @@ import modules.helper.options.objects.ConfigYamlFile;
 
 import java.io.*;
 import java.net.URL;
-import java.util.HashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class OptionsHandler {
