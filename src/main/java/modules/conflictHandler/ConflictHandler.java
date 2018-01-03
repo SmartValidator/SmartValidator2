@@ -2,11 +2,12 @@ package modules.conflictHandler;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class ConflictHandler {
 
-    private List<VerifiedAnnouncement> announcements;
+    private List<Announcement> announcements;
     private List<Roa> roas;
     private List<Overlap> overlaps;
 
@@ -14,21 +15,21 @@ public class ConflictHandler {
     private Connection connection;
 
     public class Overlap {
-        private VerifiedAnnouncement announcement;
+        private Announcement announcement;
         private List<RoaEntry> roas;
 
-        public Overlap(VerifiedAnnouncement announcement, List<RoaEntry> roas){
+        public Overlap(Announcement announcement, List<RoaEntry> roas){
             this.announcement = announcement;
             this.roas = roas;
         }
 
-        public Overlap(VerifiedAnnouncement announcement, RoaEntry roaEntry){
+        public Overlap(Announcement announcement, RoaEntry roaEntry){
             this.announcement = announcement;
             this.roas = new ArrayList<>();
             this.roas.add(roaEntry);
         }
 
-        public VerifiedAnnouncement getAnnouncement(){
+        public Announcement getAnnouncement(){
             return this.announcement;
         }
 
@@ -84,7 +85,7 @@ public class ConflictHandler {
         }
     }
 
-    public class Roa {
+    public class Roa  implements Comparable {
         private int id;
         private long asn;
         private String prefix;
@@ -112,6 +113,12 @@ public class ConflictHandler {
         public String toString(){
             return this.id + "\t" + this.asn + "\t" + this.prefix + "\t" + this.max_length + "\t" + this.filtered + "\t" +
                     this.whitelisted + "\t" + this.trust_anchor_id + "\t" + this.created_at + "\t" + this.updated_at;
+        }
+
+        @Override
+        public int compareTo(Object o){
+            Announcement other = (Announcement) o;
+            return getId() - other.getId();
         }
 
         public int getId(){
@@ -152,42 +159,7 @@ public class ConflictHandler {
         }
     }
 
-    public class VerifiedAnnouncement {
-        private int id;
-        private Announcement announcement;
-        private Timestamp created_at;
-        private Timestamp updated_at;
-
-        public VerifiedAnnouncement(int id, Announcement announcement, Timestamp created_at, Timestamp updated_at){
-            this.id = id;
-            this.announcement = announcement;
-            this.created_at = created_at;
-            this.updated_at = updated_at;
-        }
-
-        @Override
-        public String toString(){
-            return this.id + "\t" + this.announcement.toString() + "\t" + this.created_at + "\t" + this.updated_at;
-        }
-
-        public int getId(){
-            return this.id;
-        }
-
-        public long getAsn(){
-            return this.announcement.getAsn();
-        }
-
-        public String getPrefix(){
-            return this.announcement.getPrefix();
-        }
-
-        public Timestamp getCreated_at(){
-            return announcement.getCreated_at();
-        }
-    }
-
-    public class Announcement {
+    public class Announcement implements Comparable {
         private int id;
         private long asn;
         private String prefix;
@@ -203,23 +175,16 @@ public class ConflictHandler {
         }
 
         @Override
-        public String toString(){
-            return this.id + "\t" + this.asn + "\t" + this.prefix + "\t" + this.created_at + "\t" + this.updated_at;
+        public int compareTo(Object o){
+            Announcement other = (Announcement) o;
+            return getId() - other.getId();
         }
 
         public int getId(){
-            return this.id;
+            return id;
         }
 
-        public long getAsn(){
-            return this.asn;
-        }
-
-        public String getPrefix(){
-            return this.prefix;
-        }
-
-        public Timestamp getCreated_at(){
+        public Timestamp getCreated_at() {
             return created_at;
         }
     }
@@ -303,48 +268,27 @@ public class ConflictHandler {
     /**
      * Loads the table of verified BPG announcements from the database.
      */
-    private void loadAnnouncementsOld(){
+    private void loadAnnouncements(){
         this.announcements = new ArrayList<>();
         try{
             Statement stmt = connection.createStatement();
-            ResultSet rs = stmt.executeQuery("SELECT * FROM announcements ORDER BY id");
-            List<Announcement> announcements = new ArrayList<>();
-            Announcement announcement;
-
+            ResultSet rs = stmt.executeQuery(
+                    "SELECT id, asn, prefix, created_at, updated_at FROM announcements WHERE id IN " +
+                            "(SELECT announcement_id FROM verified_announcements)");
             while(rs.next()){
-                int id = rs.getInt(1);
-                long asn = rs.getLong(2);
-                String prefix = rs.getString(3);
-                Timestamp created_at = rs.getTimestamp(4);
-                Timestamp updated_at = rs.getTimestamp(5);
-                announcement = new Announcement(id,asn, prefix, created_at, updated_at);
-                announcements.add(announcement);
-                if(announcements.size() % 100000 == 0){
-                    System.out.println("Loaded " + announcements.size() + " announcements.");
-                }
-            }
-
-            rs = stmt.executeQuery("SELECT * FROM verified_announcements ORDER BY id");
-            VerifiedAnnouncement verifiedAnnouncement;
-
-            while(rs.next()){
-                int id = rs.getInt(1);
-                int announcement_id = rs.getInt(2);
-                Timestamp created_at = rs.getTimestamp(3);
-                Timestamp updated_at = rs.getTimestamp(4);
-                announcement = announcements.get(announcement_id - 1);
-                verifiedAnnouncement = new VerifiedAnnouncement(id, announcement, created_at, updated_at);
-                this.announcements.add(verifiedAnnouncement);
-                if(this.announcements.size() % 100000 == 0){
-                    System.out.println("Loaded " + this.announcements.size() + " verified announcements.");
-                }
+                announcements.add(new Announcement(
+                        rs.getInt("id"),
+                        rs.getLong("asn"),
+                        rs.getString("prefix"),
+                        rs.getTimestamp("created_at"),
+                        rs.getTimestamp("updated_at")
+                ));
             }
         }catch(Exception e){
             System.out.println(e.getMessage());
         }
+        Collections.sort(announcements);
     }
-
-    private void loadAnnouncements(){}
 
     /**
      * Loads the ROA table from the database.
@@ -387,7 +331,7 @@ public class ConflictHandler {
 
             int previousAnnouncement_id;
             int announcement_id = rs.getInt(2);
-            VerifiedAnnouncement announcement = announcements.get(announcement_id - 1);
+            Announcement announcement = announcements.get(announcement_id - 1);
 
             int roa_id = rs.getInt(3);
             Roa roa = roas.get(roa_id - 1);
@@ -460,7 +404,7 @@ public class ConflictHandler {
             Statement stmt = connection.createStatement();
             int wl = stmt.executeUpdate("DELETE FROM validated_roas WHERE whitelisted = true");
             for( int i = 0; i < overlaps.size(); i++ ){
-                VerifiedAnnouncement announcement = overlaps.get(i).getAnnouncement();
+                Announcement announcement = overlaps.get(i).getAnnouncement();
                 if((now - announcement.getCreated_at().getTime()) / DAY > days){
                     for(int j = 0; j < overlaps.get(i).getRoaIds().length; j++){
                         int roaId = overlaps.get(i).getRoaIds()[j];
@@ -481,7 +425,7 @@ public class ConflictHandler {
             Statement stmt = connection.createStatement();
             int wl = stmt.executeUpdate("DELETE FROM validated_roas WHERE whitelisted = true");
             for( int i = 0; i < overlaps.size(); i++ ){
-                VerifiedAnnouncement announcement = overlaps.get(i).getAnnouncement();
+                Announcement announcement = overlaps.get(i).getAnnouncement();
                 if((now - announcement.getCreated_at().getTime()) / DAY > days){
                     for(int j = 0; j < overlaps.get(i).getRoaIds().length; j++){
                         int roaId = overlaps.get(i).getRoaIds()[j];
