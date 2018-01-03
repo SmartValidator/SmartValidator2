@@ -1,4 +1,4 @@
-package modules.dataFeeder;
+package modules.dataFeeder.bmpFeeder;
 
 import java.io.BufferedReader;
 import java.io.IOException;

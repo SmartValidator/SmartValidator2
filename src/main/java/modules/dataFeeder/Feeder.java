@@ -1,9 +1,11 @@
 package modules.dataFeeder;
 
+import modules.dataFeeder.bmpFeeder.BmpFeeder;
 import modules.dataFeeder.rpkiFeeder.RpkiFeeder;
 import modules.dataFeeder.rpkiFeeder.RpkiValidatorControlThread;
 
 import java.net.URL;
+import java.util.concurrent.ScheduledFuture;
 
 public class Feeder {
     private static Feeder instance = null;
@@ -11,8 +13,9 @@ public class Feeder {
     private Feeder() {
     }
 
-    private void start(){
-        RpkiFeeder.getInstance().start();
+    public void start(){
+        ScheduledFuture<?> signal =  RpkiFeeder.getInstance().start();
+        BmpFeeder.getInstance().start();
 
     }
 
