@@ -221,14 +221,27 @@ public class ConflictSeeker {
 
         }
     }
+    private void dropAndCreateTable() throws Exception{
+        connection.createStatement().execute("DROP TABLE IF EXISTS validated_roas_verified_announcements ");
+        connection.createStatement().execute("CREATE TABLE validated_roas_verified_announcements (\n" +
+                "    id SERIAL PRIMARY KEY,\n" +
+                "    verified_announcement_id integer REFERENCES verified_announcements,\n" +
+                "    validated_roa_id integer REFERENCES validated_roas,\n" +
+                "    route_validity int,\n" +
+                "    created_at TIMESTAMP NOT NULL DEFAULT NOW(),\n" +
+                "    updated_at TIMESTAMP NOT NULL DEFAULT NOW()\n" +
+                ")");
+        connection.createStatement().execute("CREATE TRIGGER set_timestamp BEFORE UPDATE ON validated_roas_verified_announcements FOR EACH ROW EXECUTE PROCEDURE update_timestamp()");
 
+    }
     private void runConflictSeeker(){
         try {
             validated_roas = new ArrayList<>();
             validatedAnnouncements = new HashMap<>();
             this.getRoas();
-            PreparedStatement ps = this.detectOverlap();
-            ps.executeBatch();
+            this.dropAndCreateTable();
+//            PreparedStatement ps = this.detectOverlap();
+//            ps.executeBatch();
         }catch(Exception e){
             System.out.println(e.getMessage());
         }
