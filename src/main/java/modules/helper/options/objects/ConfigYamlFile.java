@@ -16,4 +16,27 @@ public class ConfigYamlFile
     @JsonProperty
     private Logger logger;
 
+    public DatabaseProps getDatabase() {
+        return database;
+    }
+
+    public void setDatabase(DatabaseProps database) {
+        this.database = database;
+    }
+
+    public General getGeneral() {
+        return general;
+    }
+
+    public void setGeneral(General general) {
+        this.general = general;
+    }
+
+    public Logger getLogger() {
+        return logger;
+    }
+
+    public void setLogger(Logger logger) {
+        this.logger = logger;
+    }
 }

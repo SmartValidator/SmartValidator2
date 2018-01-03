@@ -12,7 +12,12 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class OptionsHandler {
     private static final OptionsHandler instance = new OptionsHandler();
     final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
-    static HashMap<String, String > optionsMap = new HashMap<>();
+
+    public ConfigYamlFile getOptions() {
+        return options;
+    }
+
+    private ConfigYamlFile options;
 
     private OptionsHandler(){
 
@@ -24,8 +29,8 @@ public class OptionsHandler {
             File file = new File(configFilePath);
             rwl.writeLock().lock();
             final ObjectMapper mapper = new ObjectMapper(new YAMLFactory()); // jackson databind
-            ConfigYamlFile configYamlFile = mapper.readValue(file, ConfigYamlFile.class);
-
+            options = mapper.readValue(file, ConfigYamlFile.class);
+            System.out.println(options.getDatabase());
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {

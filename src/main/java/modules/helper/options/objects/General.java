@@ -1,5 +1,5 @@
 package modules.helper.options.objects;
 
-class General {
+public class General {
 
 }
