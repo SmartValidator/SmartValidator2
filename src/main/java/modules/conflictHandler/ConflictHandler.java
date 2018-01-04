@@ -317,7 +317,7 @@ public class ConflictHandler {
     /**
      * Cleans the overlap table from entries with a valid ROA, so that only conflicts remain.
      */
-    private void removeValid(){
+    private void removeValidOverlaps(){
         for(int i = 0; i < overlaps.size(); i++){
             for(int j = 0; j < overlaps.get(i).getRoaEntrys().size(); j++){
                 // If the ROAs field contains a valid ROA, the overlap is removed from the list.
@@ -351,7 +351,7 @@ public class ConflictHandler {
         for( int i = 0; i < overlaps.size(); i++ ){
             Announcement announcement = overlaps.get(i).getAnnouncement();
             if((now - announcement.getCreated_at().getTime()) / DAY > days){
-                int max_length = Integer.parseInt(announcement.prefix.split("/")[2]);
+                int max_length = Integer.parseInt(announcement.prefix.split("/")[1]);
                 roas.add(new Roa(roas.size(), announcement.getAsn(), announcement.getPrefix(),
                         max_length, 0, null, null));
             }
@@ -362,7 +362,7 @@ public class ConflictHandler {
         System.out.println("Resolving conflicts, please stand by...");
         long start = System.currentTimeMillis();
 
-        removeValid();
+        removeValidOverlaps();
         switch(heuristic){
             case -1 :	ignore();
                 break;
