@@ -373,6 +373,34 @@ public class ConflictHandler {
         }
     }
 
+    private int[] getHeuristicSettings() {
+        int[] settings = new int[2];
+        settings[0] = 0;
+        settings[1] = 1;
+        try {
+            ResultSet rs = connection.createStatement().executeQuery("SELECT value FROM settings " +
+                    "WHERE key IN ('conflictHandler.heuristic', 'conflictHandler.thresholdDays')");
+            rs.next();
+            settings[0] = Integer.parseInt(rs.getString("value"));
+            rs.next();
+            settings[1] = Integer.parseInt(rs.getString("value"));
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+        } finally {
+            if(settings[0] < 0 || settings[0] > 3) {
+                settings[0] = 0;
+            }
+            if(settings[1] < 0) {
+                settings[1] = 0;
+            } else if(settings[1] > 32) {
+                settings[1] = 32;
+            }
+        }
+        return settings;
+    }
+
     private void handleConflicts(int heuristic, int days) {
         System.out.println("Resolving conflicts, please stand by...");
         long start = System.currentTimeMillis();
