@@ -46,9 +46,8 @@ public class ConflictSeeker {
     }
 
     private boolean checkAsn(Roa curRoa,ResultSet rs) throws Exception{
-        if(curRoa.asn.equals(rs.getString(2)))
-            return true;
-        return false;
+        if (curRoa.asn.equals(rs.getString(2))) return true;
+        else return false;
 
     }
     private boolean checkLength(Roa curRoa,ResultSet rs) throws Exception{
