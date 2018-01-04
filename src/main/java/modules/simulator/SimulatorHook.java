@@ -5,6 +5,8 @@ import java.sql.*;
 
 
 public class SimulatorHook implements Runnable {
+	public static int conflict_timeout_days = 365;
+
 	public void run() {
 		Connection dbc = null;
 		try {
@@ -17,7 +19,11 @@ public class SimulatorHook implements Runnable {
 
 			/* copy the validated_roas_verified_announcements table */
 			s = dbc.createStatement();
-			s.executeUpdate("insert into archived_conflicts (prefix,reason) select prefix, route_validity from announcements inner join validated_roas_verified_announcements as o on announcements.id = verified_announcement_id where route_validity > 0 and not exists ( select verified_announcement_id from validated_roas_verified_announcements where route_validity = 0 and verified_announcement_id = o.verified_announcement_id ) group by prefix, route_validity;");
+			s.executeUpdate("insert into archived_conflicts (prefix, reason) ( select prefix, route_validity from announcements inner join validated_roas_verified_announcements as vrva on announcements.id = vrva.verified_announcement_id where route_validity > 0 and not exists ( select verified_announcement_id from validated_roas_verified_announcements where route_validity = 0 and verified_announcement_id = vrva.verified_announcement_id ) group by prefix, route_validity ) on conflict (prefix, reason) do update set updated_at = now();");
+			s.close();
+
+			s = dbc.createStatement();
+			s.executeUpdate("delete from archived_conflicts where updated_at < now() - interval '" + Integer.toString(conflict_timeout_days) + " days'");
 			s.close();
 
 			/* create fake ROA - method = 0 */
