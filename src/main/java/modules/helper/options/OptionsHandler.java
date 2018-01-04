@@ -9,7 +9,7 @@ import java.net.URL;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class OptionsHandler {
-    private static final OptionsHandler instance = new OptionsHandler();
+    private static OptionsHandler instance = null;
     final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
 
     public ConfigYamlFile getOptions() {
@@ -41,7 +41,10 @@ public class OptionsHandler {
 
 
 
-    public static OptionsHandler getInstance(){
+    public static synchronized OptionsHandler getInstance(){
+        if(instance == null){
+            instance = new OptionsHandler();
+        }
         return instance;
     }
 }
