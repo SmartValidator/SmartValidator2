@@ -31,6 +31,7 @@ public class SimulatorHook implements Runnable {
 			dbc.commit();
 			dbc.close();
 		} catch (Exception ex) {
+			System.out.println(ex);
 			if (dbc != null) {
 				try {
 					dbc.rollback();
