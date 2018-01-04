@@ -167,6 +167,14 @@ public class ConflictHandler {
         }
     }
 
+    /**
+     * Start the Conflict Handler in Smart Mode, that is:
+     * Either filter or whitelist ROAs after conflicting announcement has existed for n days.
+     * @param heuristic heuristic that should be applied
+     *                  0 : Filter ROAs
+     *                  1 : Create whitelist ROAs
+     * @param days number of days announcement has to exist
+     */
     public ConflictHandler(int heuristic, int days) {
         connection = DbHandler.produceConnection();
 
@@ -179,16 +187,23 @@ public class ConflictHandler {
         }
     }
 
-    public ConflictHandler() {
-        connection = DbHandler.produceConnection();
+    /**
+     * Start the Conflict Handler in Automatic Mode, that is:
+     * Either ignore all conflicts or filter or whitelist all ROAs.
+     * @param heuristic heuristic that should be applied
+     *                  -1: Ignore conflicts
+     *                  0 : Filter ROAs
+     *                  1 : Create whitelist ROAs
+     */
+    public ConflictHandler(int heuristic){
+        new ConflictHandler(heuristic, 0);
+    }
 
-        if (connection != null) {
-            loadData();
-            handleConflicts(-1, 0);
-            pushRoas();
-        } else {
-            System.out.println("Failed to make connection!");
-        }
+    /**
+     * Default constructor, ignores all conflicts.
+     */
+    public ConflictHandler() {
+        new ConflictHandler(-1, 0);
     }
 
     /*----- Data Loading -----*/
