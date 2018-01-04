@@ -168,42 +168,18 @@ public class ConflictHandler {
     }
 
     /**
-     * Start the Conflict Handler in Smart Mode, that is:
-     * Either filter or whitelist ROAs after conflicting announcement has existed for n days.
-     * @param heuristic heuristic that should be applied
-     *                  0 : Filter ROAs
-     *                  1 : Create whitelist ROAs
-     * @param days number of days announcement has to exist
+     * Start the Conflict Handler.
      */
-    public ConflictHandler(int heuristic, int days) {
+    public ConflictHandler() {
         connection = DbHandler.produceConnection();
 
         if (connection != null) {
             loadData();
-            handleConflicts(heuristic, days);
+            handleConflicts();
             pushRoas();
         } else {
             System.out.println("Failed to make connection!");
         }
-    }
-
-    /**
-     * Start the Conflict Handler in Automatic Mode, that is:
-     * Either ignore all conflicts or filter or whitelist all ROAs.
-     * @param heuristic heuristic that should be applied
-     *                  -1: Ignore conflicts
-     *                  0 : Filter ROAs
-     *                  1 : Create whitelist ROAs
-     */
-    public ConflictHandler(int heuristic){
-        new ConflictHandler(heuristic, 0);
-    }
-
-    /**
-     * Default constructor, ignores all conflicts.
-     */
-    public ConflictHandler() {
-        new ConflictHandler(-1, 0);
     }
 
     /*----- Data Loading -----*/
@@ -401,19 +377,20 @@ public class ConflictHandler {
         return settings;
     }
 
-    private void handleConflicts(int heuristic, int days) {
+    private void handleConflicts() {
         System.out.println("Resolving conflicts, please stand by...");
         long start = System.currentTimeMillis();
 
         removeValidOverlaps();
-        switch(heuristic){
-            case -1 :	ignore();
-                break;
-            case 0 :	filter(days);
-                break;
-            case 1 :	whitelist(days);
-                break;
-            default :	break;
+        int[] settings = getHeuristicSettings();
+        switch(settings[0]){
+            case 0: ignore();
+            break;
+            case 1: filter(0);
+            break;
+            case 2: whitelist(0);
+            break;
+            case 3: whitelist(settings[1]);
         }
 
         long end = System.currentTimeMillis();

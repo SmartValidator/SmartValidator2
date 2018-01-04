@@ -1,7 +1,7 @@
 general:
 logger:
 database:
-  host: smart-validator.net #server host address - default is smart-validator.net
+  host: localhost:8000 #server host address - default is smart-validator.net
   name: smart_validator_test_5 #actual database name
   user: svt1 #username
-  password: #password
+  password: XagO7kfuGA1ZMxhP45u7zkna7eMB235zSTfCSzFpOy76OckuubXqlCxGyyC #password
