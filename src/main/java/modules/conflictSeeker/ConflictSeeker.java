@@ -1,5 +1,7 @@
 package modules.conflictSeeker;
 
+import modules.helper.DbHandler;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -26,37 +28,38 @@ public class ConflictSeeker {
     }
 
     public ConflictSeeker(){
-        System.out.println("-------- PostgreSQL "
-                + "JDBC Connection ------------");
-
-        try {
-
-            Class.forName("org.postgresql.Driver");
-
-        } catch (ClassNotFoundException e) {
-
-            e.printStackTrace();
-            return;
-
-        }
-
-        System.out.println("PostgreSQL JDBC Driver Registered!");
-
-        connection = null;
-
-        try {
-
-            connection = DriverManager.getConnection(
-                    "jdbc:postgresql://smart-validator.net/smart_validator_test_5", System.getProperty("validator.db.user.name"),
-                    System.getProperty("validator.db.password"));
-
-        } catch (SQLException e) {
-
-            System.out.println("Connection Failed! Check output console.");
-            e.printStackTrace();
-            return;
-
-        }
+        connection = DbHandler.produceConnection();
+//        System.out.println("-------- PostgreSQL "
+//                + "JDBC Connection ------------");
+//
+//        try {
+//
+//            Class.forName("org.postgresql.Driver");
+//
+//        } catch (ClassNotFoundException e) {
+//
+//            e.printStackTrace();
+//            return;
+//
+//        }
+//
+//        System.out.println("PostgreSQL JDBC Driver Registered!");
+//
+//        connection = null;
+//
+//        try {
+//
+//            connection = DriverManager.getConnection(
+//                    "jdbc:postgresql://smart-validator.net/smart_validator_test_5", System.getProperty("validator.db.user.name"),
+//                    System.getProperty("validator.db.password"));
+//
+//        } catch (SQLException e) {
+//
+//            System.out.println("Connection Failed! Check output console.");
+//            e.printStackTrace();
+//            return;
+//
+//        }
 
         if (connection != null) {
             System.out.println("Connection established");
