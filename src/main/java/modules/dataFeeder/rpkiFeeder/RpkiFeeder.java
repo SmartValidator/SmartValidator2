@@ -29,7 +29,7 @@ public class RpkiFeeder implements Runnable {
         rpkiValidatorControlThread = new RpkiValidatorControlThread(url.getPath());
         rpkiValidatorControlThread.start();
         //TODO: check that this started succesfuly
-        ScheduledFuture<?> rpkiScheduledUpdateFuture = scheduledThreadPool.scheduleAtFixedRate(new RpkiRepoDownloader(), 0, 5, TimeUnit.MINUTES);
+        ScheduledFuture<?> rpkiScheduledUpdateFuture = scheduledThreadPool.scheduleAtFixedRate(new RpkiRepoDownloader(), 1, 5, TimeUnit.MINUTES);
         System.out.println("Starting rpki feeder scheduled ");
         if (thread_handle == null) {
             thread_handle = new Thread(this);
