@@ -27,7 +27,7 @@ public class RpkiFeeder implements Runnable {
     public ScheduledFuture<?> start() {
         URL url = getClass().getResource("/libs/rpki-validator-3/rpki-validator-3.0.0-SNAPSHOT.jar");
         rpkiValidatorControlThread = new RpkiValidatorControlThread(url.getPath());
-        rpkiValidatorControlThread.start();
+//        rpkiValidatorControlThread.start();
         //TODO: check that this started succesfuly
         ScheduledFuture<?> rpkiScheduledUpdateFuture = scheduledThreadPool.scheduleAtFixedRate(new RpkiRepoDownloader(), 1, 5, TimeUnit.MINUTES);
         System.out.println("Starting rpki feeder scheduled ");

@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import io.vertx.core.Vertx;
 import modules.helper.DbHandler;
+import org.postgresql.util.PGobject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -47,6 +48,9 @@ public class RpkiRepoDownloader implements Runnable {
                         content.append(inputLine);
                     }
                     JSONObject jsonObject = JSON.parseObject(content.toString());
+                    // Raw stirng example {"roa":[
+                    // {"asn":"44489","prefix":"185.131.60.0/22","maxLength":24,"ta":"RIPE NCC RPKI Root"},
+                    // ]}
                     JSONArray roasArray = jsonObject.getJSONArray("roa");
 
                     try(Connection dbConnection = DbHandler.produceConnection()){
@@ -59,10 +63,9 @@ public class RpkiRepoDownloader implements Runnable {
                                 "\t\tCONSTRAINT validated_roas_rv_test_pkey\n" +
                                 "\t\t\tPRIMARY KEY,\n" +
                                 "\tasn INT4(10) NOT NULL,\n" +
-                                "\tpreifx CIDR(max) NOT NULL,\n" +
+                                "\tprefix CIDR(max) NOT NULL,\n" +
                                 "\tmax_length INT4(10),\n" +
-                                "\ttrust_anchor VARCHAR(255) NOT NULL\n" +
-                                ");\n");
+                                "\ttrust_anchor VARCHAR(255) NOT NULL);");
                         dbConnection.commit();
 
 
@@ -71,8 +74,14 @@ public class RpkiRepoDownloader implements Runnable {
 
                         for(Object value : roasArray  ){
                             JSONObject json_roa = (JSONObject) value;
-//                            {"roa":[{"asn":"44489","prefix":"185.131.60.0/22","maxLength":24,"ta":"RIPE NCC RPKI Root"}]}
+                            ps.setInt(1, json_roa.getIntValue("asn"));
 
+                            PGobject dummyObject = new PGobject();
+                            dummyObject.setType("cidr");
+                            dummyObject.setValue(json_roa.getString ("prefix"));
+                            ps.setObject(2, dummyObject, Types.OTHER);
+                            ps.setInt(3, json_roa.getIntValue("maxLength"));
+                            ps.setString(4, json_roa.getString("ta"));
 
                         }
 
