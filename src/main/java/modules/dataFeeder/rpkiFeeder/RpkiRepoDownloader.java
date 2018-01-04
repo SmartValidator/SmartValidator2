@@ -71,6 +71,7 @@ public class RpkiRepoDownloader implements Runnable {
 
                         for(Object value : roasArray  ){
                             JSONObject json_roa = (JSONObject) value;
+//                            {"roa":[{"asn":"44489","prefix":"185.131.60.0/22","maxLength":24,"ta":"RIPE NCC RPKI Root"}]}
 
 
                         }
