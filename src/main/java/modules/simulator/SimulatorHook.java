@@ -23,10 +23,12 @@ public class SimulatorHook implements Runnable {
 			/* create fake ROA - method = 0 */
 			s = dbc.createStatement();
 			s.executeUpdate("insert into archived_resolutions (prefix, asn, max_length, method) select prefix, asn, max_length, 0 from payload_roas as pr where not exists ( select id from validated_roas where prefix = pr.prefix and asn = pr.asn and max_length = pr.max_length );");
+			s.close();
 
 			/* discard too restrictive ROA - method = 1 */
 			s = dbc.createStatement();
 			s.executeUpdate("insert into archived_resolutions (prefix, asn, max_length, method) select prefix, asn, max_length, 1 from validated_roas as vr where not exists ( select id from payload_roas where prefix = vr.prefix and asn = vr.asn and max_length = vr.max_length );");
+			s.close();
 
 			dbc.commit();
 			dbc.close();
