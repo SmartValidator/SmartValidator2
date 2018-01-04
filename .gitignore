@@ -75,3 +75,5 @@ fabric.properties
 smartvalidator2.iml
 target/
 src/test/
+
+config.yaml
