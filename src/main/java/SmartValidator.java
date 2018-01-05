@@ -1,25 +1,22 @@
 import modules.conflictHandler.ConflictHandler;
 import modules.conflictSeeker.ConflictSeeker;
 import modules.dataFeeder.Feeder;
+import modules.dataFeeder.rpkiFeeder.RpkiFeeder;
 import modules.helper.options.OptionsHandler;
-import modules.simulator.SimulatorHook;
 
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 public class SmartValidator {
-
-    public static void main(String args[]){
+    public static void main(String args[]) {
 
         try {
             //Init option handler
             OptionsHandler optionsHandler = OptionsHandler.getInstance();
-            //Init feeder and start raw data information flowing
-            Feeder.getInstance().start();
+            //Init feeder and startRpkiValidator raw data information flowing
+            Feeder.getInstance().startRawDataFeed();
+
             regularUpdate();
-        } catch (ExecutionException e) {
+        } catch (ExecutionException | InterruptedException e) {
             e.printStackTrace();
         }
         //Init thread worker pool
@@ -30,15 +27,16 @@ public class SmartValidator {
     }
 
     private static void regularUpdate() throws ExecutionException {
-        ConflictSeeker conflictSeeker = new ConflictSeeker();
-        ConflictHandler conflictHandler = new ConflictHandler();
-        conflictSeeker.start();
         try {
-            conflictSeeker.run();
-            conflictHandler.run();
-        } catch (ExecutionException e) {
-            throw new ExecutionException(e);
+            RpkiFeeder.getInstance().startRpkiRepoDownload();
+            ConflictSeeker conflictSeeker = new ConflictSeeker();
+            ConflictHandler conflictHandler = new ConflictHandler();
+            conflictSeeker.start();
+                conflictSeeker.run();
+                conflictHandler.run();
+        } finally {
         }
+
 
 
     }

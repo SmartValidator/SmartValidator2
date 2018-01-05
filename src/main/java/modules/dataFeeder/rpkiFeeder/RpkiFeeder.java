@@ -3,10 +3,7 @@ package modules.dataFeeder.rpkiFeeder;
 import modules.dataFeeder.Feeder;
 
 import java.net.URL;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -20,22 +17,26 @@ public class RpkiFeeder implements Runnable {
     private Thread thread_handle = null;
 
     private RpkiFeeder(){
-
-        scheduledThreadPool = Executors.newScheduledThreadPool(1);
+//        scheduledThreadPool = Executors.newScheduledThreadPool(1);
     }
 
-    public ScheduledFuture<?> start() {
+    public void startRpkiValidator() throws ExecutionException, InterruptedException {
         URL url = getClass().getResource("/libs/rpki-validator-3/rpki-validator-3.0.0-SNAPSHOT.jar");
         rpkiValidatorControlThread = new RpkiValidatorControlThread(url.getPath());
-//        rpkiValidatorControlThread.start();
+//        rpkiValidatorControlThread.startRpkiValidator();
         //TODO: check that this started succesfuly
-        ScheduledFuture<?> rpkiScheduledUpdateFuture = scheduledThreadPool.scheduleAtFixedRate(new RpkiRepoDownloader(), 1, 5, TimeUnit.MINUTES);
+//        ScheduledFuture<?> rpkiScheduledUpdateFuture = scheduledThreadPool.scheduleAtFixedRate(new RpkiRepoDownloader(), 1, 5, TimeUnit.MINUTES);
         System.out.println("Starting rpki feeder scheduled ");
         if (thread_handle == null) {
             thread_handle = new Thread(this);
             thread_handle.start();
         }
-        return rpkiScheduledUpdateFuture;
+
+    }
+
+    public void startRpkiRepoDownload(){
+        RpkiRepoDownloader rpkiRepoDownloader = new RpkiRepoDownloader();
+        rpkiRepoDownloader.run();
     }
 
     public void close() {

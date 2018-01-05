@@ -16,8 +16,6 @@ import java.sql.*;
 
 public class RpkiRepoDownloader implements Runnable {
 
-    private Vertx vertx;
-
     public RpkiRepoDownloader() {
     }
 
@@ -48,7 +46,7 @@ public class RpkiRepoDownloader implements Runnable {
                         content.append(inputLine);
                     }
                     JSONObject jsonObject = JSON.parseObject(content.toString());
-                    // Raw stirng example {"roa":[
+                    // Raw string example {"roa":[
                     // {"asn":"44489","prefix":"185.131.60.0/22","maxLength":24,"ta":"RIPE NCC RPKI Root"},
                     // ]}
                     JSONArray roasArray = jsonObject.getJSONArray("roa");

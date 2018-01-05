@@ -2,10 +2,8 @@ package modules.dataFeeder;
 
 import modules.dataFeeder.bmpFeeder.BmpFeeder;
 import modules.dataFeeder.rpkiFeeder.RpkiFeeder;
-import modules.dataFeeder.rpkiFeeder.RpkiValidatorControlThread;
 
-import java.net.URL;
-import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ExecutionException;
 
 public class Feeder {
     private static Feeder instance = null;
@@ -13,8 +11,8 @@ public class Feeder {
     private Feeder() {
     }
 
-    public void start(){
-        ScheduledFuture<?> signal =  RpkiFeeder.getInstance().start();
+    public void startRawDataFeed() throws ExecutionException, InterruptedException {
+        RpkiFeeder.getInstance().startRpkiValidator();
         BmpFeeder.getInstance().start();
 
     }
