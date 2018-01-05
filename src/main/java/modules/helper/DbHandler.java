@@ -5,53 +5,48 @@ import modules.helper.options.OptionsHandler;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.concurrent.ExecutionException;
 
 public class DbHandler {
 
-    private DbHandler(){
+    private DbHandler() {
 
     }
 
 
-
-    public static synchronized Connection produceConnection(){
+    public static synchronized Connection produceConnection() throws ExecutionException {
         Connection connection = null;
-        System.out.println("-------- PostgreSQL "
-                + "JDBC Connection Testing ------------");
-
         try {
+            System.out.println("-------- PostgreSQL "
+                    + "JDBC Connection Testing ------------");
 
             Class.forName("org.postgresql.Driver");
 
-        } catch (ClassNotFoundException e) {
 
-            System.out.println("Where is your PostgreSQL JDBC Driver? "
-                    + "Include in your library path!");
-            e.printStackTrace();
-            return null;
-        }
-
-        System.out.println("PostgreSQL JDBC Driver Registered!");
+            System.out.println("PostgreSQL JDBC Driver Registered!");
 
 
-        try {
             final String connectionString = "jdbc:postgresql://" + OptionsHandler.getInstance().getOptions().getDatabase().getHost() + "/" + OptionsHandler.getInstance().getOptions().getDatabase().getName();
             connection = DriverManager.getConnection(
                     connectionString, OptionsHandler.getInstance().getOptions().getDatabase().getUser(),
                     OptionsHandler.getInstance().getOptions().getDatabase().getPassword());
 
+
+            if (connection != null) {
+                System.out.println("You made it, take control your database now!");
+            } else {
+                throw new Exception("Failed to make connection!");
+            }
         } catch (SQLException e) {
-
             System.out.println("Connection Failed! Check output console");
-            e.printStackTrace();
-            return null;
+            throw new ExecutionException(e);
 
-        }
-
-        if (connection != null) {
-            System.out.println("You made it, take control your database now!");
-        } else {
-            System.out.println("Failed to make connection!");
+        } catch (ClassNotFoundException e) {
+            System.out.println("Where is your PostgreSQL JDBC Driver? "
+                    + "Include in your library path!");
+            throw new ExecutionException(e);
+        } catch (Exception e) {
+            throw new ExecutionException(e);
         }
         return connection;
 
