@@ -42,7 +42,7 @@ public class SmartValidator {
             conflictSeeker.run();
             conflictHandler.run();
             if(isSimulatorMode()){
-                //push
+
             } else {
 
             }
