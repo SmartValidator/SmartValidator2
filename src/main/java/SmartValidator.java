@@ -38,24 +38,34 @@ public class SmartValidator {
     }
 
     private static void regularUpdate() throws ExecutionException, InterruptedException {
+        Future<Void> conflictArchivationTask = null;
+        Future<Void> resolvingArchivationTask = null;
+
         try {
             RpkiFeeder.getInstance().startRpkiRepoDownload();
-            Future<Void> conflictArchivationTask = executor.submit(new ConflictArchiver());
-            Future<Void> resolvingArchivationTask = executor.submit(new ResolverArchiver());
-
+            conflictArchivationTask = executor.submit(new ConflictArchiver()); //TODO make sure base tables arent empty
+            resolvingArchivationTask = executor.submit(new ResolverArchiver());
             ConflictSeeker conflictSeeker = new ConflictSeeker();
             ConflictHandler conflictHandler = new ConflictHandler();
-            conflictArchivationTask.get();
             conflictSeeker.run();
-            resolvingArchivationTask.get();
             conflictHandler.run();
+
+
 
             if(isSimulatorMode()){
 
             } else {
 
             }
+
+
         } finally {
+            if (conflictArchivationTask != null) {
+                conflictArchivationTask.get();
+            }
+            if (resolvingArchivationTask != null) {
+                resolvingArchivationTask.get();
+            }
         }
 
 
