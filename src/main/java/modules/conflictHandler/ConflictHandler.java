@@ -7,6 +7,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import static java.sql.Types.OTHER;
 
@@ -171,6 +172,9 @@ public class ConflictHandler {
      * Start the Conflict Handler.
      */
     public ConflictHandler() {
+    }
+
+    public void run() throws ExecutionException {
         connection = DbHandler.produceConnection();
 
         if (connection != null) {
@@ -178,7 +182,7 @@ public class ConflictHandler {
             handleConflicts();
             pushRoas();
         } else {
-            System.out.println("Failed to make connection!");
+            throw new ExecutionException(new Exception("Failed to make connection!"));
         }
     }
 
@@ -187,7 +191,7 @@ public class ConflictHandler {
     /**
      * Loads the table of verified BPG announcements from the database.
      */
-    private void loadAnnouncements(){
+    private void loadAnnouncements() throws ExecutionException {
         this.announcements = new ArrayList<>();
         try{
             Statement stmt = connection.createStatement();
@@ -207,7 +211,7 @@ public class ConflictHandler {
 //                }
             }
         }catch(Exception e){
-            System.out.println(e.getMessage());
+            throw new ExecutionException(e);
         }
         Collections.sort(announcements);
     }
@@ -215,7 +219,7 @@ public class ConflictHandler {
     /**
      * Loads the ROA table from the database.
      */
-    private void loadRoas(){
+    private void loadRoas() throws ExecutionException {
         roas = new ArrayList<>();
         try{
             Statement stmt = connection.createStatement();
@@ -230,7 +234,7 @@ public class ConflictHandler {
 //                }
             }
         }catch(Exception e){
-            System.out.println(e.getMessage());
+            throw new ExecutionException(e);
         }
         Collections.sort(roas);
     }
@@ -239,7 +243,7 @@ public class ConflictHandler {
      * Loads the ROA - BGP announcement overlaps, i.e. possible conflicts,
      * from the database.
      */
-    private void loadOverlaps(){
+    private void loadOverlaps() throws ExecutionException {
         overlaps = new ArrayList<>();
         try{
             Statement stmt = connection.createStatement();
@@ -286,11 +290,11 @@ public class ConflictHandler {
                 overlaps.add(conflict);
             }
         }catch(Exception e){
-            System.out.println(e.getMessage());
+            throw new ExecutionException(e);
         }
     }
 
-    private void loadData() {
+    private void loadData() throws ExecutionException {
         System.out.println("Loading conflicts, please stand by...");
         long start = System.currentTimeMillis();
 
@@ -349,7 +353,7 @@ public class ConflictHandler {
         }
     }
 
-    private int[] getHeuristicSettings() {
+    private int[] getHeuristicSettings() throws ExecutionException {
         int[] settings = new int[2];
         settings[0] = 0;
         settings[1] = 1;
@@ -360,10 +364,8 @@ public class ConflictHandler {
             settings[0] = Integer.parseInt(rs.getString("value"));
             rs.next();
             settings[1] = Integer.parseInt(rs.getString("value"));
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } catch (NumberFormatException e) {
-            e.printStackTrace();
+        } catch (SQLException | NumberFormatException e) {
+            throw new ExecutionException(e);
         } finally {
             if(settings[0] < 0 || settings[0] > 3) {
                 settings[0] = 0;
@@ -377,7 +379,7 @@ public class ConflictHandler {
         return settings;
     }
 
-    private void handleConflicts() {
+    private void handleConflicts() throws ExecutionException {
         System.out.println("Resolving conflicts, please stand by...");
         long start = System.currentTimeMillis();
 
@@ -400,7 +402,7 @@ public class ConflictHandler {
 
     /*----- ROA Pushing -----*/
 
-    private void dropAndCreateTable() throws Exception{
+    private void dropAndCreateTable() throws SQLException {
         connection.createStatement().execute("DROP TABLE IF EXISTS payload_roas");
         connection.createStatement().execute("CREATE TABLE payload_roas (\n" +
                 "    id SERIAL PRIMARY KEY,\n" +
@@ -414,7 +416,7 @@ public class ConflictHandler {
 
     }
 
-    private PreparedStatement collectRoas(){
+    private PreparedStatement collectRoas() throws ExecutionException {
         try{
             String papo = "INSERT INTO payload_roas " +
                     "(asn, prefix, max_length) VALUES " + "(?, ?, ?)";
@@ -431,13 +433,12 @@ public class ConflictHandler {
             }
             return ps;
         }catch(Exception e){
-            System.out.println(e.getMessage());
+            throw new ExecutionException(e);
         }
 
-        return null;
     }
 
-    private void pushRoas(){
+    private void pushRoas() throws ExecutionException {
         try {
             System.out.println("Pushing ROAs, please stand by...");
             long start = System.currentTimeMillis();
@@ -449,10 +450,8 @@ public class ConflictHandler {
             long end = System.currentTimeMillis();
             long diff = end - start;
             System.out.println("Pushing took " + (diff / 1000)  + "." + (diff % 1000) + " s.\n");
-        } catch (SQLException e) {
-            e.printStackTrace();
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new ExecutionException(e);
         }
     }
 

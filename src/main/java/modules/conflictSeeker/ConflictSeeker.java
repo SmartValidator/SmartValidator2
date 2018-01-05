@@ -7,8 +7,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
-public class ConflictSeeker implements Runnable {
+public class ConflictSeeker {
 
     private Connection connection;
     private List<Roa> validated_roas;
@@ -46,7 +47,7 @@ public class ConflictSeeker implements Runnable {
     }
 
 
-    private PreparedStatement detectOverlap(){
+    private PreparedStatement detectOverlap() throws ExecutionException {
         try{
 
             ResultSet rs;
@@ -76,15 +77,13 @@ public class ConflictSeeker implements Runnable {
             }
             return ps;
         }catch(Exception e){
-            System.out.println(e.getMessage());
+            throw new ExecutionException(e);
 
         }
-
-        return null;
-    }
+        }
 
 
-    private void getRoas( ) {
+    private void getRoas( ) throws ExecutionException {
         try {
             // Get the database metadata
 
@@ -94,7 +93,7 @@ public class ConflictSeeker implements Runnable {
                 validated_roas.add(new Roa(rs.getInt(1),rs.getString(2),rs.getString(3),rs.getString(4)));
             }
         } catch (Exception e) {
-            System.out.println(e.getMessage());
+            throw new ExecutionException(e);
 
         }
     }
@@ -117,23 +116,23 @@ public class ConflictSeeker implements Runnable {
         if(this.connection == null)
             throw new Exception("Failed to connect DB");
     }
-    public void start(){
+    public void start() throws ExecutionException {
         try{
             validated_roas = new ArrayList<>();
             this.connectToDB();
         }catch(Exception e){
-            System.out.println(e.getMessage());
+            throw new ExecutionException(e);
         }
 
     }
-    public void run(){
+    public void run() throws ExecutionException{
         try {
             this.getRoas();
             this.dropAndCreateTable();
             PreparedStatement ps = this.detectOverlap();
             ps.executeBatch();
         }catch(Exception e){
-            System.out.println(e.getMessage());
+                throw new ExecutionException(e);
         }
 
 

@@ -10,7 +10,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class OptionsHandler {
     private static OptionsHandler instance = null;
-    final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
+    private final ReentrantReadWriteLock rwl = new ReentrantReadWriteLock();
 
     public ConfigYamlFile getOptions() {
         return options;
@@ -29,7 +29,6 @@ public class OptionsHandler {
             rwl.writeLock().lock();
             final ObjectMapper mapper = new ObjectMapper(new YAMLFactory()); // jackson databind
             options = mapper.readValue(file, ConfigYamlFile.class);
-            System.out.println(options.getDatabase());
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         } catch (IOException e) {
