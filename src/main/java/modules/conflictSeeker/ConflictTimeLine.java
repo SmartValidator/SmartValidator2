@@ -5,13 +5,18 @@ import modules.helper.DbHandler;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.concurrent.ExecutionException;
 
 public class ConflictTimeLine implements Runnable {
 
     Connection connection;
     public void run(){
         System.out.println("Running conflict timeline editor\n");
-        connection = DbHandler.produceConnection();
+        try {
+            connection = DbHandler.produceConnection();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void resetConflictTimelineTable() throws Exception{

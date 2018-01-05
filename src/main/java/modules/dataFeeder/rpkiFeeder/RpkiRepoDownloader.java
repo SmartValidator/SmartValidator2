@@ -13,6 +13,7 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.sql.*;
+import java.util.concurrent.ExecutionException;
 
 public class RpkiRepoDownloader implements Runnable {
 
@@ -88,6 +89,8 @@ public class RpkiRepoDownloader implements Runnable {
                         ps.executeBatch();
 
                     } catch (SQLException e) {
+                        e.printStackTrace();
+                    } catch (ExecutionException e) {
                         e.printStackTrace();
                     }
 

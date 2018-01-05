@@ -11,6 +11,9 @@ import java.sql.SQLException;
 import java.util.concurrent.ExecutionException;
 
 public class SmartValidator {
+    private static final boolean SIMULATOR_OPERATION_MODE = true;
+    private static final boolean DEFAULT_OPERATION_MODE = SIMULATOR_OPERATION_MODE;
+
     public static void main(String args[]) {
 
         try {
@@ -51,29 +54,17 @@ public class SmartValidator {
     }
 
     private static boolean isSimulatorMode() throws ExecutionException {
-        int settings = -1;
+        boolean settings = DEFAULT_OPERATION_MODE;
 
-//        try {
-//            Connection connection = DbHandler.produceConnection();
-//            if(connection)
-//            ResultSet rs = connection.createStatement().executeQuery("SELECT value FROM settings " +
-//                    "WHERE key IN ('conflictHandler.heuristic')");
-//            rs.next();
-//            settings[0] = Integer.parseInt(rs.getString("value"));
-//            rs.next();
-//            settings[1] = Integer.parseInt(rs.getString("value"));
-//        } catch (SQLException | NumberFormatException e) {
-//            throw new ExecutionException(e);
-//        } finally {
-//            if(settings[0] < 0 || settings[0] > 3) {
-//                settings[0] = 0;
-//            }
-//            if(settings[1] < 0) {
-//                settings[1] = 0;
-//            } else if(settings[1] > 32) {
-//                settings[1] = 32;
-//            }
-//        }
-        return false;
+        try {
+            Connection connection = DbHandler.produceConnection();
+            ResultSet rs = connection.createStatement().executeQuery("SELECT value FROM settings " +
+                    "WHERE key IN ('conflictHandler.heuristic')");
+            rs.next();
+            settings = Boolean.parseBoolean(rs.getString("value"));
+        } catch (SQLException | NumberFormatException e) {
+            throw new ExecutionException(e);
+        }
+        return settings;
     }
 }
