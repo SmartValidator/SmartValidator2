@@ -167,24 +167,15 @@ public class ConflictHandler {
         }
     }
 
-    public ConflictHandler(int heuristic, int days) {
-        connection = DbHandler.produceConnection();
-
-        if (connection != null) {
-            loadData();
-            handleConflicts(heuristic, days);
-            pushRoas();
-        } else {
-            System.out.println("Failed to make connection!");
-        }
-    }
-
+    /**
+     * Start the Conflict Handler.
+     */
     public ConflictHandler() {
         connection = DbHandler.produceConnection();
 
         if (connection != null) {
             loadData();
-            handleConflicts(-1, 0);
+            handleConflicts();
             pushRoas();
         } else {
             System.out.println("Failed to make connection!");
@@ -358,19 +349,48 @@ public class ConflictHandler {
         }
     }
 
-    private void handleConflicts(int heuristic, int days) {
+    private int[] getHeuristicSettings() {
+        int[] settings = new int[2];
+        settings[0] = 0;
+        settings[1] = 1;
+        try {
+            ResultSet rs = connection.createStatement().executeQuery("SELECT value FROM settings " +
+                    "WHERE key IN ('conflictHandler.heuristic', 'conflictHandler.thresholdDays')");
+            rs.next();
+            settings[0] = Integer.parseInt(rs.getString("value"));
+            rs.next();
+            settings[1] = Integer.parseInt(rs.getString("value"));
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+        } finally {
+            if(settings[0] < 0 || settings[0] > 3) {
+                settings[0] = 0;
+            }
+            if(settings[1] < 0) {
+                settings[1] = 0;
+            } else if(settings[1] > 32) {
+                settings[1] = 32;
+            }
+        }
+        return settings;
+    }
+
+    private void handleConflicts() {
         System.out.println("Resolving conflicts, please stand by...");
         long start = System.currentTimeMillis();
 
         removeValidOverlaps();
-        switch(heuristic){
-            case -1 :	ignore();
-                break;
-            case 0 :	filter(days);
-                break;
-            case 1 :	whitelist(days);
-                break;
-            default :	break;
+        int[] settings = getHeuristicSettings();
+        switch(settings[0]){
+            case 0: ignore();
+            break;
+            case 1: filter(0);
+            break;
+            case 2: whitelist(0);
+            break;
+            case 3: whitelist(settings[1]);
         }
 
         long end = System.currentTimeMillis();
