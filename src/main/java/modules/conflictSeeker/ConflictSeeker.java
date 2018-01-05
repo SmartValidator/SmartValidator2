@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ConflictSeeker {
+public class ConflictSeeker implements Runnable {
 
     private Connection connection;
     private List<Roa> validated_roas;
@@ -28,21 +28,7 @@ public class ConflictSeeker {
     }
 
     public ConflictSeeker(){
-        connection = DbHandler.produceConnection();
-        if (connection != null) {
-            System.out.println("Connection established");
-            System.out.println("Running conflict seeker - start\n");
-            long startTime = System.currentTimeMillis();
-            this.runConflictSeeker();
-            long stopTime = System.currentTimeMillis();
-            long elapsedTime = stopTime - startTime;
-            System.out.println("Finish conflict seeker - end\n");
-            System.out.format("Elapsed time: %d milliseconds, %f seconds\n",elapsedTime, (float) (elapsedTime / 1000));
 
-
-        } else {
-            System.out.println("Failed to make connection!");
-        }
     }
 
     private boolean checkAsn(Roa curRoa,ResultSet rs) throws Exception{
@@ -59,13 +45,6 @@ public class ConflictSeeker {
         return false;
     }
 
-    private boolean isConflictExist(long roa_id, long ann_id,int routeValidity) throws Exception{
-        ResultSet rs = connection.createStatement().executeQuery("SELECT * FROM validated_roas_verified_announcements" +
-                " WHERE verified_announcement_id =  '" + ann_id+ "'" +
-                "AND validated_roa_id =  '" + roa_id+ "'" +
-                "AND route_validity = '"+routeValidity+"'");
-        return rs.next();
-    }
 
     private PreparedStatement detectOverlap(){
         try{
@@ -132,9 +111,23 @@ public class ConflictSeeker {
         connection.createStatement().execute("CREATE TRIGGER set_timestamp BEFORE UPDATE ON validated_roas_verified_announcements FOR EACH ROW EXECUTE PROCEDURE update_timestamp()");
 
     }
-    private void runConflictSeeker(){
-        try {
+
+    private void connectToDB() throws Exception {
+        this.connection = DbHandler.produceConnection();
+        if(this.connection == null)
+            throw new Exception("Failed to connect DB");
+    }
+    public void start(){
+        try{
             validated_roas = new ArrayList<>();
+            this.connectToDB();
+        }catch(Exception e){
+            System.out.println(e.getMessage());
+        }
+
+    }
+    public void run(){
+        try {
             this.getRoas();
             this.dropAndCreateTable();
             PreparedStatement ps = this.detectOverlap();
