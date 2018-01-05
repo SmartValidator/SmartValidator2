@@ -29,82 +29,82 @@ public class BgpRisFeederControlThread implements Runnable {
 
     @Override
     public void run() {
+        connectAndDownload("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz");
+//        connectAndDownload("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz");
+    }
+
+    private void connectAndDownload(String urlString) {
         URL url = null;
-        HttpURLConnection risIpv4Connection = null;
-        RandomAccessFile randomAccessFile = null;
-        InputStream inputStream = null;
-        try(Connection dbConnection = DbHandler.produceConnection()) {
-            url = new URL("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz");
-            risIpv4Connection = (HttpURLConnection) url.openConnection();
-            risIpv4Connection.setRequestMethod("GET");
-            risIpv4Connection.setUseCaches(false);
-            risIpv4Connection.setAllowUserInteraction(false);
-            risIpv4Connection.connect();
-            int status = risIpv4Connection.getResponseCode();
-            size = risIpv4Connection.getContentLength();
-            inputStream = risIpv4Connection.getInputStream();
+        HttpURLConnection bgpRisConnection = null;
 
-            GZIPInputStream gzip = new GZIPInputStream(inputStream);
-            BufferedReader br = new BufferedReader(new InputStreamReader(gzip));
+        try {
+            url = new URL(urlString);
 
-            assert dbConnection != null;
-            Statement stmt = dbConnection.createStatement();
-//                        ResultSet rs = stmt.executeQuery("CREATE TABLE validated_roas_rv_test ( id SERIAL (10) DEFAULT nextval('validated_roas_rv_test_id_seq':: REGCLASS ) NOT NULL\n" + "  CONSTRAINT validated_roas_rv_test_pkey\n" + "  PRIMARY KEY,\n" + "  asn          CIDR(max)    NOT NULL, max_length   INT4(10)     NOT NULL,  trust_anchor VARCHAR(255) NOT NULL\n" + "); COMMENT ON TABLE validated_roas_rv_test IS 'test table to be filled from the rpki validator run'");
-            stmt.execute("DROP TABLE IF EXISTS global_announcements");
-            stmt.execute("CREATE TABLE public.global_announcements\n" +
-                    "(\n" +
-                    "  id INT DEFAULT nextval('validated_roas_id_seq'::REGCLASS) PRIMARY KEY NOT NULL,\n" +
-                    "  asn BIGINT NOT NULL,\n" +
-                    "  prefix CIDR NOT NULL,\n" +
-                    "  ris_peers BIGINT NOT NULL,\n" +
-                    "  created_at TIMESTAMP DEFAULT now() NOT NULL\n" +
-                    ");\n");
+            bgpRisConnection = (HttpURLConnection) url.openConnection();
+            bgpRisConnection.setRequestMethod("GET");
+            bgpRisConnection.setUseCaches(false);
+            bgpRisConnection.setAllowUserInteraction(false);
 
-            String insertStmt = "INSERT INTO global_announcements(asn,prefix,ris_peers) VALUES (?, ?, ?)";
-            PreparedStatement ps = dbConnection.prepareStatement(insertStmt);
+            bgpRisConnection.addRequestProperty("User-Agent", "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:57.0) Gecko/20100101 Firefox/57.0");
+            bgpRisConnection.addRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+            int status = bgpRisConnection.getResponseCode();
+            switch(status){
+                case 200:
+                case 201:
+                    GZIPInputStream gzip = new GZIPInputStream(bgpRisConnection.getInputStream());
+                    BufferedReader in = new BufferedReader(new InputStreamReader(gzip));
+                    String inputLine;
 
-            String line;
-            int i = 0;
-            while ((line = br.readLine()) != null && i < 100){
-                if(line.matches(BGP_ENTRY_REGEX)){
-                    String[] split = line.split("\\s+");
-                    long asn = Long.parseLong(split[0]);
-                    String prefix = split[1];
-                    long risPeers = Long.parseLong(split[2]);
-                    PGobject dummyObject = new PGobject();
-                    dummyObject.setType("cidr");
-                    dummyObject.setValue(prefix);
-                    ps.setObject(2, dummyObject, Types.OTHER);
-                    ps.setLong(1, asn);
-                    ps.setLong(3, risPeers);
-                    ps.addBatch();
-                    System.out.println(asn + prefix + risPeers);
-                } else {
-                    System.out.println("FALSE : " + line);
-                }
+                    try (Connection dbConnection = DbHandler.produceConnection()) {
+                        assert dbConnection != null;
+                        Statement stmt = dbConnection.createStatement();
+                        stmt.execute("DROP TABLE IF EXISTS global_announcements");
+                        stmt.execute("CREATE TABLE public.global_announcements\n" +
+                                "(\n" +
+                                "  id INT DEFAULT nextval('validated_roas_id_seq'::REGCLASS) PRIMARY KEY NOT NULL,\n" +
+                                "  asn BIGINT NOT NULL,\n" +
+                                "  prefix CIDR NOT NULL,\n" +
+//                                "  ris_peers BIGINT NOT NULL,\n" +
+                                "  created_at TIMESTAMP DEFAULT now() NOT NULL,\n" +
+                                "  updated_at TIMESTAMP DEFAULT now() NOT NULL\n" +
+                                ");\n");
 
-                i++;
+                        String insertStmt = "INSERT INTO global_announcements(asn,prefix) VALUES (?, ?)";
+                        PreparedStatement ps = dbConnection.prepareStatement(insertStmt);
+
+                        while ((inputLine = in.readLine()) != null){
+                            if(inputLine.matches(BGP_ENTRY_REGEX)){
+                                String[] split = inputLine.split("\\s+");
+                                long asn = Long.parseLong(split[0]);
+                                String prefix = split[1];
+                                long risPeers = Long.parseLong(split[2]);
+                                PGobject dummyObject = new PGobject();
+                                dummyObject.setType("cidr");
+                                dummyObject.setValue(prefix);
+                                ps.setObject(2, dummyObject, Types.OTHER);
+                                ps.setLong(1, asn);
+//                                ps.setLong(3, risPeers);
+                                ps.addBatch();
+                            } else {
+                                System.out.println("Non-parseable line : " + inputLine);
+                            }
+                        }
+                        ps.executeBatch();
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                    }
+                    in.close();
+                default:
             }
-            ps.executeBatch();
-
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (ProtocolException e) {
-            e.printStackTrace();
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            if(inputStream!=null){
-                try {
-                    inputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+        } catch (ProtocolException e1) {
+            e1.printStackTrace();
+        } catch (MalformedURLException e1) {
+            e1.printStackTrace();
+        } catch (IOException e1) {
+            e1.printStackTrace();
+        } finally{
+            assert bgpRisConnection != null;
+            bgpRisConnection.disconnect();
         }
     }
 
