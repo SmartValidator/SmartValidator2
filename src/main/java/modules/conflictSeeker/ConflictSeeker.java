@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class ConflictSeeker {
+public class ConflictSeeker implements Runnable {
 
     private Connection connection;
     private List<Roa> validated_roas;
@@ -113,15 +113,22 @@ public class ConflictSeeker {
 
     }
 
-    private void cSconnectToDB() throws Exception {
+    private void connectToDB() throws Exception {
         this.connection = DbHandler.produceConnection();
         if(this.connection == null)
             throw new Exception("Failed to connect DB");
     }
-    public void runConflictSeeker(){
-        try {
+    public void start(){
+        try{
             validated_roas = new ArrayList<>();
-            this.cSconnectToDB();
+            this.connectToDB();
+        }catch(Exception e){
+            System.out.println(e.getMessage());
+        }
+
+    }
+    public void run(){
+        try {
             this.getRoas();
             this.dropAndCreateTable();
             PreparedStatement ps = this.detectOverlap();
