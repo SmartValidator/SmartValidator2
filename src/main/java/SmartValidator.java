@@ -1,3 +1,5 @@
+import modules.archiver.ConflictArchiver;
+import modules.archiver.ResolverArchiver;
 import modules.conflictHandler.ConflictHandler;
 import modules.conflictSeeker.ConflictSeeker;
 import modules.dataFeeder.Feeder;
@@ -8,11 +10,15 @@ import modules.helper.options.OptionsHandler;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.*;
 
 public class SmartValidator {
     private static final boolean SIMULATOR_OPERATION_MODE = true;
     private static final boolean DEFAULT_OPERATION_MODE = SIMULATOR_OPERATION_MODE;
+    private static final int NTHREADS = 5;
+    private static final ExecutorService executor
+            = Executors.newFixedThreadPool(NTHREADS);
+
 
     public static void main(String args[]) {
 
@@ -22,31 +28,44 @@ public class SmartValidator {
             //Init feeder and startRpkiValidator raw data information flowing
             Feeder.getInstance().startRawDataFeed();
 
+
+
             regularUpdate();
         } catch (ExecutionException | InterruptedException e) {
             e.printStackTrace();
         }
         //Init thread worker pool
-//        ScheduledExecutorService scheduledThreadPool = Executors.newScheduledThreadPool(5);
-//        scheduledThreadPool.scheduleAtFixedRate(new SimulatorHook(), 15, 180, TimeUnit.MINUTES);
-
-
     }
 
-    private static void regularUpdate() throws ExecutionException {
+    private static void regularUpdate() throws ExecutionException, InterruptedException {
+        Future<Void> conflictArchivationTask = null;
+        Future<Void> resolvingArchivationTask = null;
+
         try {
             RpkiFeeder.getInstance().startRpkiRepoDownload();
+            conflictArchivationTask = executor.submit(new ConflictArchiver()); //TODO make sure base tables arent empty
+            resolvingArchivationTask = executor.submit(new ResolverArchiver());
             ConflictSeeker conflictSeeker = new ConflictSeeker();
             ConflictHandler conflictHandler = new ConflictHandler();
-            conflictSeeker.start();
             conflictSeeker.run();
             conflictHandler.run();
+
+
+
             if(isSimulatorMode()){
-                //push
+
             } else {
 
             }
+
+
         } finally {
+            if (conflictArchivationTask != null) {
+                conflictArchivationTask.get();
+            }
+            if (resolvingArchivationTask != null) {
+                resolvingArchivationTask.get();
+            }
         }
 
 

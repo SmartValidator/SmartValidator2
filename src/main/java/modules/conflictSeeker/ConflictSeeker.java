@@ -116,17 +116,11 @@ public class ConflictSeeker {
         if(this.connection == null)
             throw new Exception("Failed to connect DB");
     }
-    public void start() throws ExecutionException {
-        try{
-            validated_roas = new ArrayList<>();
-            this.connectToDB();
-        }catch(Exception e){
-            throw new ExecutionException(e);
-        }
 
-    }
     public void run() throws ExecutionException{
         try {
+            validated_roas = new ArrayList<>();
+            this.connectToDB();
             this.getRoas();
             this.dropAndCreateTable();
             PreparedStatement ps = this.detectOverlap();
