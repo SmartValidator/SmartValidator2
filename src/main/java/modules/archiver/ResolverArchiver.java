@@ -8,11 +8,11 @@ import java.sql.Statement;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 
-public class ResolverArchiver implements Callable<Void>{
+public class ResolverArchiver implements Callable<Void> {
     private static int conflict_timeout_days = 365;
 
 
-    public ResolverArchiver(){
+    public ResolverArchiver() {
 
     }
 
@@ -26,16 +26,16 @@ public class ResolverArchiver implements Callable<Void>{
 
             Statement s;
             s = dbc.createStatement();
-            s.executeUpdate("insert into archive_snapshot_times (start) values (now());");
+            s.executeUpdate("INSERT INTO archive_snapshot_times (start) VALUES (now());");
 
             /* create fake ROA - method = 0 */
             s = dbc.createStatement();
-            s.executeUpdate("insert into archived_resolutions (prefix, asn, max_length, method) select prefix, asn, max_length, 0 from payload_roas as pr where not exists ( select id from validated_roas where prefix = pr.prefix and asn = pr.asn and max_length = pr.max_length );");
+            s.executeUpdate("INSERT INTO archived_resolutions (prefix, asn, max_length, method) SELECT prefix, asn, max_length, 0 FROM payload_roas AS pr WHERE NOT exists ( SELECT id FROM validated_roas WHERE prefix = pr.prefix AND asn = pr.asn AND max_length = pr.max_length );");
             s.close();
 
             /* discard too restrictive ROA - method = 1 */
             s = dbc.createStatement();
-            s.executeUpdate("insert into archived_resolutions (prefix, asn, max_length, method) select prefix, asn, max_length, 1 from validated_roas as vr where not exists ( select id from payload_roas where prefix = vr.prefix and asn = vr.asn and max_length = vr.max_length );");
+            s.executeUpdate("INSERT INTO archived_resolutions (prefix, asn, max_length, method) SELECT prefix, asn, max_length, 1 FROM validated_roas AS vr WHERE NOT exists ( SELECT id FROM payload_roas WHERE prefix = vr.prefix AND asn = vr.asn AND max_length = vr.max_length );");
             s.close();
 
             dbc.commit();
