@@ -58,14 +58,19 @@ public class RpkiRepoDownloader implements Runnable {
                         stmt.execute("DROP TABLE IF EXISTS rpki_validated_roas");
                         stmt.execute("CREATE TABLE public.rpki_validated_roas\n" +
                                 "(\n" +
-                                "  id INT DEFAULT nextval('validated_roas_id_seq'::REGCLASS) PRIMARY KEY NOT NULL,\n" +
-                                "  asn BIGINT NOT NULL,\n" +
-                                "  prefix CIDR NOT NULL,\n" +
-                                "  max_length INT NOT NULL,\n" +
-                                "  trust_anchor_id INT,\n" +
-                                "  created_at TIMESTAMP DEFAULT now() NOT NULL,\n" +
-                                "  CONSTRAINT validated_roas_trust_anchor_id_fkey FOREIGN KEY (trust_anchor_id) REFERENCES trust_anchors (id)\n" +
-                                ");\n");
+                                "    id INTEGER DEFAULT nextval('validated_roas_id_seq'::regclass) PRIMARY KEY NOT NULL,\n" +
+                                "    asn BIGINT NOT NULL,\n" +
+                                "    prefix CIDR NOT NULL,\n" +
+                                "    max_length INTEGER NOT NULL,\n" +
+                                "    filtered BOOLEAN DEFAULT false,\n" +
+                                "    whitelisted BOOLEAN DEFAULT false,\n" +
+                                "    trust_anchor_id INTEGER,\n" +
+                                "    created_at TIMESTAMP DEFAULT now() NOT NULL,\n" +
+                                "    updated_at TIMESTAMP DEFAULT now() NOT NULL,\n" +
+                                "    CONSTRAINT validated_roas_trust_anchor_id_fkey FOREIGN KEY (trust_anchor_id) REFERENCES trust_anchors (id)\n" +
+                                ")");
+                        stmt.execute("CREATE UNIQUE INDEX validated_roas_pkey ON public.validated_roas (id)");
+                        stmt.execute("CREATE INDEX idx_validated_roas_prefix ON public.validated_roas (prefix)");
 
 
                         String insertStmt = "INSERT INTO rpki_validated_roas(asn,prefix,max_length,trust_anchor_id) VALUES (?, ?, ?, ?)";
