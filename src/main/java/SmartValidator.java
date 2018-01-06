@@ -1,7 +1,6 @@
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
-import com.sun.org.apache.xpath.internal.functions.WrongNumberArgsException;
 import modules.conflictHandler.ConflictHandler;
 import modules.conflictSeeker.ConflictSeeker;
 import modules.dataFeeder.Feeder;
@@ -30,7 +29,6 @@ public class SmartValidator {
     private static Condition onGoingValidationRunCondition = onGoingValidationRun.newCondition();
     private static HttpServer server = null;
     private static ScheduledExecutorService scheduler = null;
-    private static CyclicBarrier barrier = new CyclicBarrier(1);
     public static void main(String args[])  {
         scheduler = new ScheduledThreadPoolExecutor(2);
 
@@ -47,9 +45,6 @@ public class SmartValidator {
             main.setUncaughtExceptionHandler((t, e) -> {
                 throw new RuntimeException(e);
             });
-            onGoingValidationRun.lock();
-            onGoingValidationRunCondition.signal();
-            onGoingValidationRun.unlock();
             ScheduledFuture<?> scheduledFuture = scheduler.scheduleAtFixedRate(main, 0, 300, TimeUnit.MINUTES);
             backendServer();
             scheduledFuture.get();
@@ -69,7 +64,6 @@ public class SmartValidator {
         Future<?> bgpRisDownloadTask = null;
         try {
             onGoingValidationRun.lock();
-            onGoingValidationRunCondition.await();
             bgpRisDownloadTask = executor.submit(new BgpRisFeederControlThread());
             RpkiFeeder.getInstance().startRpkiRepoDownload();
 //            conflictArchivationTask = executor.submit(new ConflictArchiver()); //TODO make sure base tables arent empty
@@ -119,9 +113,9 @@ public class SmartValidator {
             } else if (result == 0){
                 settings = false;
             } else {
-                throw new WrongNumberArgsException("the mode setting doesn't match any option");
+                throw new NumberFormatException("the mode setting doesn't match any option");
             }
-        } catch (SQLException | NumberFormatException | WrongNumberArgsException e) {
+        } catch (SQLException | NumberFormatException e) {
             throw new ExecutionException(e);
         }
         return settings;
@@ -160,7 +154,6 @@ public class SmartValidator {
                 case "/modeChange":
                     onGoingValidationRun.lock();
                     try {
-                        onGoingValidationRunCondition.await();
                         Thread main = new Thread(() -> {
                             try {
                                 regularUpdate();
@@ -172,11 +165,8 @@ public class SmartValidator {
                             throw new RuntimeException(e);
 
                         });
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
                     } finally {
                         sendResponse(httpExchange, "ack");
-                        onGoingValidationRunCondition.signal();
                         onGoingValidationRun.unlock();
                     }
                     break;
