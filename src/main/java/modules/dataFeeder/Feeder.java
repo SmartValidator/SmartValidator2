@@ -17,6 +17,11 @@ public class Feeder {
 
     }
 
+    public void stopRawDataFeed() {
+        RpkiFeeder.getInstance().close();
+        BmpFeeder.getInstance().close();
+    }
+
     public static Feeder getInstance() {
         if (instance == null) {
             instance = new Feeder();

@@ -1,54 +1,90 @@
+import modules.archiver.ConflictArchiver;
+import modules.archiver.ResolverArchiver;
 import modules.conflictHandler.ConflictHandler;
 import modules.conflictSeeker.ConflictSeeker;
 import modules.dataFeeder.Feeder;
+import modules.dataFeeder.risFeeder.BgpRisFeederControlThread;
 import modules.dataFeeder.rpkiFeeder.RpkiFeeder;
 import modules.helper.DbHandler;
-import modules.helper.options.OptionsHandler;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.*;
 
 public class SmartValidator {
     private static final boolean SIMULATOR_OPERATION_MODE = true;
     private static final boolean DEFAULT_OPERATION_MODE = SIMULATOR_OPERATION_MODE;
+    private static final int NTHREADS = 5;
+    private static final ExecutorService executor
+            = Executors.newFixedThreadPool(NTHREADS);
 
-    public static void main(String args[]) {
 
+    public static void main(String args[])  {
+        ScheduledExecutorService scheduler = null;
         try {
-            //Init option handler
-            OptionsHandler optionsHandler = OptionsHandler.getInstance();
             //Init feeder and startRpkiValidator raw data information flowing
             Feeder.getInstance().startRawDataFeed();
-
-            regularUpdate();
-        } catch (ExecutionException | InterruptedException e) {
+            ScheduledFuture<?> scheduledFuture;
+            scheduler = new ScheduledThreadPoolExecutor(1);
+            Thread main = new Thread(() -> {
+                try {
+                    regularUpdate();
+                } catch (ExecutionException | InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            main.setUncaughtExceptionHandler((t, e) -> {
+                throw new RuntimeException(e);
+            });
+            scheduledFuture = scheduler.scheduleAtFixedRate(main, 0, 180, TimeUnit.SECONDS);
+            scheduledFuture.get();
+        } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
+        } finally {
+            if(scheduler != null){
+                scheduler.shutdown();
+                Feeder.getInstance().stopRawDataFeed();
+            }
         }
-        //Init thread worker pool
-//        ScheduledExecutorService scheduledThreadPool = Executors.newScheduledThreadPool(5);
-//        scheduledThreadPool.scheduleAtFixedRate(new SimulatorHook(), 15, 180, TimeUnit.MINUTES);
-
-
     }
 
-    private static void regularUpdate() throws ExecutionException {
+    private static void regularUpdate() throws ExecutionException, InterruptedException {
+        Future<Void> conflictArchivationTask = null;
+        Future<Void> resolvingArchivationTask = null;
+        Future<?> bgpRisDownloadTask = null;
         try {
+//            bgpRisDownloadTask = executor.submit(new BgpRisFeederControlThread());
             RpkiFeeder.getInstance().startRpkiRepoDownload();
+            conflictArchivationTask = executor.submit(new ConflictArchiver()); //TODO make sure base tables arent empty
+            resolvingArchivationTask = executor.submit(new ResolverArchiver());
+//            bgpRisDownloadTask.get();
+
             ConflictSeeker conflictSeeker = new ConflictSeeker();
             ConflictHandler conflictHandler = new ConflictHandler();
-            conflictSeeker.start();
+//                    Integer a = Integer.parseInt("XTX");
             conflictSeeker.run();
             conflictHandler.run();
-            if(isSimulatorMode()){
-                //push
+
+
+            if (isSimulatorMode()) {
+
             } else {
 
             }
-        } finally {
-        }
 
+
+        } finally {
+            if (conflictArchivationTask != null) {
+                conflictArchivationTask.get();
+            }
+            if (resolvingArchivationTask != null) {
+                resolvingArchivationTask.get();
+            }
+            if (bgpRisDownloadTask != null) {
+                bgpRisDownloadTask.get();
+            }
+        }
 
 
     }
@@ -59,7 +95,7 @@ public class SmartValidator {
         try {
             Connection connection = DbHandler.produceConnection();
             ResultSet rs = connection.createStatement().executeQuery("SELECT value FROM settings " +
-                    "WHERE key IN ('conflictHandler.heuristic')");
+                    "WHERE key IN ('simulator_mode')");
             rs.next();
             settings = Boolean.parseBoolean(rs.getString("value"));
         } catch (SQLException | NumberFormatException e) {
@@ -67,4 +103,5 @@ public class SmartValidator {
         }
         return settings;
     }
+
 }
