@@ -11,22 +11,23 @@ import java.util.concurrent.locks.ReentrantLock;
 public class RpkiFeeder implements Runnable {
     private static RpkiFeeder instance = null;
     private RpkiValidatorControlThread rpkiValidatorControlThread = null;
-//    private ScheduledExecutorService scheduledThreadPool = null;
     private Lock aLock = new ReentrantLock();
     private Condition condVar = aLock.newCondition();
     private Thread thread_handle = null;
 
     private RpkiFeeder(){
-//        scheduledThreadPool = Executors.newScheduledThreadPool(1);
     }
 
-    public void startRpkiValidator() throws ExecutionException, InterruptedException {
+    public static RpkiFeeder getInstance() {
+        if (instance == null) {
+            instance = new RpkiFeeder();
+        }
+        return instance;
+    }
+
+    public void startRpkiValidator() {
         URL url = getClass().getResource("/libs/rpki-validator-3/rpki-validator-3.0.0-SNAPSHOT.jar");
         rpkiValidatorControlThread = new RpkiValidatorControlThread(url.getPath());
-//        rpkiValidatorControlThread.startRpkiValidator();
-        //TODO: check that this started succesfuly
-//        ScheduledFuture<?> rpkiScheduledUpdateFuture = scheduledThreadPool.scheduleAtFixedRate(new RpkiRepoDownloader(), 1, 5, TimeUnit.MINUTES);
-        System.out.println("Starting rpki feeder scheduled ");
         if (thread_handle == null) {
             thread_handle = new Thread(this);
             thread_handle.start();
@@ -40,16 +41,8 @@ public class RpkiFeeder implements Runnable {
     }
 
     public void close() {
-//        scheduledThreadPool.shutdown();
         rpkiValidatorControlThread.stop();
 //        condVar.signal();
-    }
-
-    public static RpkiFeeder getInstance() {
-        if (instance == null) {
-            instance = new RpkiFeeder();
-        }
-        return instance;
     }
 
     @Override

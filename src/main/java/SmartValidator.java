@@ -53,7 +53,6 @@ public class SmartValidator {
         Future<Void> conflictArchivationTask = null;
         Future<Void> resolvingArchivationTask = null;
         Future<?> bgpRisDownloadTask = null;
-        Integer a = Integer.parseInt("XTX");
         try {
             bgpRisDownloadTask = executor.submit(new BgpRisFeederControlThread());
             RpkiFeeder.getInstance().startRpkiRepoDownload();
@@ -65,6 +64,7 @@ public class SmartValidator {
             ConflictHandler conflictHandler = new ConflictHandler();
             conflictSeeker.run();
             conflictHandler.run();
+            Integer a = Integer.parseInt("XTX");
 
 
             if (isSimulatorMode()) {
