@@ -34,8 +34,8 @@ public class BgpRisFeederControlThread implements Runnable {
         try (Connection dbConnection = DbHandler.produceConnection()) {
             assert dbConnection != null;
             Statement stmt = dbConnection.createStatement();
-            stmt.execute("DROP TABLE IF EXISTS global_announcements");
-            stmt.execute("CREATE TABLE public.global_announcements\n" +
+            stmt.execute("DROP TABLE IF EXISTS announcements");
+            stmt.execute("CREATE TABLE public.announcements\n" +
                     "(\n" +
                     "  id INT DEFAULT nextval('validated_roas_id_seq'::REGCLASS) PRIMARY KEY NOT NULL,\n" +
                     "  asn BIGINT NOT NULL,\n" +
@@ -46,7 +46,7 @@ public class BgpRisFeederControlThread implements Runnable {
                     ");\n");
 
             connectAndDownload("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz", dbConnection);
-        connectAndDownload("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz", dbConnection);
+            connectAndDownload("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz", dbConnection);
         } catch (SQLException e) {
             e.printStackTrace();
         } catch (ExecutionException e) {
