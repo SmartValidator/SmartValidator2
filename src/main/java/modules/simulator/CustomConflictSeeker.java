@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-public class LocalConflictSeeker {
+public class CustomConflictSeeker {
 
     private Connection connection;
     private List<Roa> payload_roas;
@@ -28,7 +28,7 @@ public class LocalConflictSeeker {
         }
     }
 
-    public LocalConflictSeeker(){
+    public CustomConflictSeeker(){
 
     }
 
@@ -38,7 +38,8 @@ public class LocalConflictSeeker {
 
     }
     private boolean checkLength(Roa curRoa, ResultSet rs) throws Exception{
-        int checkRoa = Math.max(Integer.parseInt(curRoa.prefix.split("\\/")[1]),Integer.parseInt(curRoa.maxLength));
+        int checkRoa = Math.max(Integer.parseInt(curRoa.prefix.split("\\/")[1]),
+                Integer.parseInt(curRoa.maxLength));
         int annPrefix = Integer.parseInt(rs.getString(3).split("\\/")[1]);
         if(annPrefix <= checkRoa){
             return true;
@@ -48,10 +49,11 @@ public class LocalConflictSeeker {
 
     private void setBlockingStatus() {
         try {
-            String papo = "UPDATE local_announcements SET  blocking_status = ? WHERE id = ?";
+            String papo = "UPDATE custom_announcements SET  blocking_status = ? WHERE id = ?";
             PreparedStatement ps = connection.prepareStatement(papo);
             ResultSet rs = connection.createStatement().executeQuery(
-                    "SELECT local_announcement_id, MAX (blocking_status) FROM local_conflicts GROUP BY local_announcement_id");
+                    "SELECT custom_announcement_id, MAX (blocking_status) " +
+                            "FROM custom_conflicts GROUP BY custom_announcement_id");
             while (rs.next()){
                 ps.setInt(2,rs.getInt(1));
                 ps.setInt(1, rs.getInt(2));
@@ -68,14 +70,14 @@ public class LocalConflictSeeker {
 
             ResultSet rs;
             int roas_counter = 0;
-            String papo = "INSERT INTO local_conflicts(local_announcement_id, blocking_status)" +
+            String papo = "INSERT INTO custom_conflicts(custom_announcement_id, blocking_status)" +
                     " VALUES" + "(?, ?)";
             PreparedStatement ps = connection.prepareStatement(papo);
             for(Roa roa : payload_roas){
                 if(roas_counter % 1000 == 0 && roas_counter > 0){
                     System.out.format("Elapsed through %d Roas .\n", roas_counter);
                 }
-                rs = connection.createStatement().executeQuery("SELECT * FROM local_announcements " +
+                rs = connection.createStatement().executeQuery("SELECT * FROM custom_announcements " +
                         "WHERE prefix <<= inet '" + roa.prefix+ "'");
                 while (rs.next() ) {
                     System.out.println("YEAH! Match!");
@@ -104,7 +106,11 @@ public class LocalConflictSeeker {
             Statement stmt = connection.createStatement();
             ResultSet rs = stmt.executeQuery("SELECT * FROM payload_roas");
             while (rs.next()){
-                payload_roas.add(new Roa(rs.getInt(1),rs.getString(2),rs.getString(3),rs.getString(4)));
+                payload_roas.add(new Roa(
+                        rs.getInt(1),
+                        rs.getString(2),
+                        rs.getString(3),
+                        rs.getString(4)));
             }
         } catch (Exception e) {
             throw new ExecutionException(e);
@@ -112,7 +118,7 @@ public class LocalConflictSeeker {
         }
     }
 
-    private void getLocalAnnouncements() {
+    private void getCustomAnnouncements() {
         try {
             List<String> userPrefixes = new ArrayList<>();
             Statement stmt = connection.createStatement();
@@ -120,7 +126,7 @@ public class LocalConflictSeeker {
             while (rs.next()) {
                 userPrefixes.add(rs.getString(1));
             }
-            String insertStmt = "INSERT INTO local_announcements(asn,prefix) VALUES (?, ?)";
+            String insertStmt = "INSERT INTO custom_announcements(asn,prefix) VALUES (?, ?)";
             PreparedStatement ps = connection.prepareStatement(insertStmt);
             for(int i = 0; i < userPrefixes.size(); i++){
                 rs = stmt.executeQuery(
@@ -142,10 +148,10 @@ public class LocalConflictSeeker {
     }
 
     private void dropAndCreateTables() throws Exception{
-        connection.createStatement().execute("DROP TABLE IF EXISTS local_conflicts ");
-        connection.createStatement().execute("DROP TABLE IF EXISTS local_announcements ");
+        connection.createStatement().execute("DROP TABLE IF EXISTS custom_conflicts ");
+        connection.createStatement().execute("DROP TABLE IF EXISTS custom_announcements ");
 
-        connection.createStatement().execute("CREATE TABLE public.local_announcements\n" +
+        connection.createStatement().execute("CREATE TABLE public.custom_announcements\n" +
                 "(\n" +
                 "  id INT DEFAULT nextval('validated_roas_id_seq'::REGCLASS) PRIMARY KEY NOT NULL,\n" +
                 "  asn BIGINT NOT NULL,\n" +
@@ -155,16 +161,20 @@ public class LocalConflictSeeker {
                 "  created_at TIMESTAMP DEFAULT now() NOT NULL,\n" +
                 "  updated_at TIMESTAMP DEFAULT now() NOT NULL\n" +
                 ");\n");
-        connection.createStatement().execute("CREATE TRIGGER set_timestamp BEFORE UPDATE ON local_announcements FOR EACH ROW EXECUTE PROCEDURE update_timestamp()");
+        connection.createStatement().execute(
+                "CREATE TRIGGER set_timestamp BEFORE UPDATE ON custom_announcements " +
+                        "FOR EACH ROW EXECUTE PROCEDURE update_timestamp()");
 
-        connection.createStatement().execute("CREATE TABLE local_conflicts (\n" +
+        connection.createStatement().execute("CREATE TABLE custom_conflicts (\n" +
                 "    id SERIAL PRIMARY KEY,\n" +
-                "    local_announcement_id INT REFERENCES local_announcements,\n" +
+                "    custom_announcement_id INT REFERENCES custom_announcements,\n" +
                 "    blocking_status INT DEFAULT 0 NOT NULL,\n" +
                 "    created_at TIMESTAMP NOT NULL DEFAULT NOW(),\n" +
                 "    updated_at TIMESTAMP NOT NULL DEFAULT NOW()\n" +
                 ")");
-        connection.createStatement().execute("CREATE TRIGGER set_timestamp BEFORE UPDATE ON local_conflicts FOR EACH ROW EXECUTE PROCEDURE update_timestamp()");
+        connection.createStatement().execute(
+                "CREATE TRIGGER set_timestamp BEFORE UPDATE ON custom_conflicts " +
+                        "FOR EACH ROW EXECUTE PROCEDURE update_timestamp()");
     }
 
     private void connectToDB() throws Exception {
@@ -179,7 +189,7 @@ public class LocalConflictSeeker {
             this.connectToDB();
             this.dropAndCreateTables();
             this.getRoas();
-            this.getLocalAnnouncements();
+            this.getCustomAnnouncements();
             PreparedStatement ps = this.detectOverlap();
             ps.executeBatch();
             this.setBlockingStatus();
