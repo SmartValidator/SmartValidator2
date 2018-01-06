@@ -28,6 +28,7 @@ public class RpkiFeeder implements Runnable {
     public void startRpkiValidator() {
         URL url = getClass().getResource("/libs/rpki-validator-3/rpki-validator-3.0.0-SNAPSHOT.jar");
         rpkiValidatorControlThread = new RpkiValidatorControlThread(url.getPath());
+//        rpkiValidatorControlThread.start();
         if (thread_handle == null) {
             thread_handle = new Thread(this);
             thread_handle.start();
@@ -41,8 +42,12 @@ public class RpkiFeeder implements Runnable {
     }
 
     public void close() {
+//        thread_handle.interrupt();
         rpkiValidatorControlThread.stop();
-//        condVar.signal();
+        aLock.lock();
+        condVar.signal();
+        aLock.unlock();
+
     }
 
     @Override

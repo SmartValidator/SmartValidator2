@@ -37,7 +37,7 @@ public class SmartValidator {
             main.setUncaughtExceptionHandler((t, e) -> {
                 throw new RuntimeException(e);
             });
-            scheduledFuture = scheduler.scheduleAtFixedRate(main, 0, 15, TimeUnit.SECONDS);
+            scheduledFuture = scheduler.scheduleAtFixedRate(main, 0, 180, TimeUnit.SECONDS);
             scheduledFuture.get();
         } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
@@ -54,17 +54,17 @@ public class SmartValidator {
         Future<Void> resolvingArchivationTask = null;
         Future<?> bgpRisDownloadTask = null;
         try {
-            bgpRisDownloadTask = executor.submit(new BgpRisFeederControlThread());
+//            bgpRisDownloadTask = executor.submit(new BgpRisFeederControlThread());
             RpkiFeeder.getInstance().startRpkiRepoDownload();
             conflictArchivationTask = executor.submit(new ConflictArchiver()); //TODO make sure base tables arent empty
             resolvingArchivationTask = executor.submit(new ResolverArchiver());
-            bgpRisDownloadTask.get();
+//            bgpRisDownloadTask.get();
 
             ConflictSeeker conflictSeeker = new ConflictSeeker();
             ConflictHandler conflictHandler = new ConflictHandler();
+//                    Integer a = Integer.parseInt("XTX");
             conflictSeeker.run();
             conflictHandler.run();
-            Integer a = Integer.parseInt("XTX");
 
 
             if (isSimulatorMode()) {
@@ -95,7 +95,7 @@ public class SmartValidator {
         try {
             Connection connection = DbHandler.produceConnection();
             ResultSet rs = connection.createStatement().executeQuery("SELECT value FROM settings " +
-                    "WHERE key IN ('conflictHandler.heuristic')");
+                    "WHERE key IN ('simulator_mode')");
             rs.next();
             settings = Boolean.parseBoolean(rs.getString("value"));
         } catch (SQLException | NumberFormatException e) {
