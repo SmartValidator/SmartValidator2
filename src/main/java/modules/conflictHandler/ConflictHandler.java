@@ -408,7 +408,6 @@ public class ConflictHandler {
 
         removeValidOverlaps();
         int[] settings = getHeuristicSettings();
-        settings[0] = 1;
         switch(settings[0]){
             case 0: ignore();
             break;
@@ -477,11 +476,6 @@ public class ConflictHandler {
 
             }
             ps.executeBatch();
-            List<Object> al = new ArrayList<>();
-            Set<Object> hs = new HashSet<>();
-//            hs.addAll();
-//            al.clear();
-//            al.addAll(hs);
             psFilter.executeBatch();
         }catch(Exception e){
             throw new ExecutionException(e);
