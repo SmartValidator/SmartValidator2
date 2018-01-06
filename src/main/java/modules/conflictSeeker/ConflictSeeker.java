@@ -52,7 +52,7 @@ public class ConflictSeeker {
 
             ResultSet rs;
             int roas_counter = 0;
-            String papo = "INSERT INTO validated_roas_verified_announcements(verified_announcement_id, validated_roa_id, route_validity)" +
+            String papo = "INSERT INTO validated_roas_verified_announcements(announcement_id, validated_roa_id, route_validity)" +
                     " VALUES" + "(?, ?, ?)";
             PreparedStatement ps = connection.prepareStatement(papo);
             for(Roa roa : validated_roas){
@@ -101,7 +101,7 @@ public class ConflictSeeker {
         connection.createStatement().execute("DROP TABLE IF EXISTS validated_roas_verified_announcements ");
         connection.createStatement().execute("CREATE TABLE validated_roas_verified_announcements (\n" +
                 "    id SERIAL PRIMARY KEY,\n" +
-                "    verified_announcement_id integer REFERENCES verified_announcements,\n" +
+                "    announcement_id integer REFERENCES announcements,\n" +
                 "    validated_roa_id integer REFERENCES validated_roas,\n" +
                 "    route_validity int,\n" +
                 "    created_at TIMESTAMP NOT NULL DEFAULT NOW(),\n" +
