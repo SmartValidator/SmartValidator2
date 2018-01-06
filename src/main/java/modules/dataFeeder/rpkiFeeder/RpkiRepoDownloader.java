@@ -3,7 +3,6 @@ package modules.dataFeeder.rpkiFeeder;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import io.vertx.core.Vertx;
 import modules.helper.DbHandler;
 import org.postgresql.util.PGobject;
 
@@ -36,7 +35,7 @@ public class RpkiRepoDownloader implements Runnable {
             rpkiValidatorRestApiConnection.addRequestProperty("User-Agent", "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:57.0) Gecko/20100101 Firefox/57.0");
             rpkiValidatorRestApiConnection.addRequestProperty("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
             int status = rpkiValidatorRestApiConnection.getResponseCode();
-            switch(status){
+            switch (status) {
                 case 200:
                 case 201:
                     BufferedReader in = new BufferedReader(
@@ -52,7 +51,7 @@ public class RpkiRepoDownloader implements Runnable {
                     // ]}
                     JSONArray roasArray = jsonObject.getJSONArray("roa");
 
-                    try(Connection dbConnection = DbHandler.produceConnection()){
+                    try (Connection dbConnection = DbHandler.produceConnection()) {
                         assert dbConnection != null;
                         Statement stmt = dbConnection.createStatement();
 //                        ResultSet rs = stmt.executeQuery("CREATE TABLE validated_roas_rv_test ( id SERIAL (10) DEFAULT nextval('validated_roas_rv_test_id_seq':: REGCLASS ) NOT NULL\n" + "  CONSTRAINT validated_roas_rv_test_pkey\n" + "  PRIMARY KEY,\n" + "  asn          CIDR(max)    NOT NULL, max_length   INT4(10)     NOT NULL,  trust_anchor VARCHAR(255) NOT NULL\n" + "); COMMENT ON TABLE validated_roas_rv_test IS 'test table to be filled from the rpki validator run'");
@@ -69,16 +68,15 @@ public class RpkiRepoDownloader implements Runnable {
                                 ");\n");
 
 
-
                         String insertStmt = "INSERT INTO rpki_validated_roas(asn,prefix,max_length,trust_anchor_id) VALUES (?, ?, ?, ?)";
                         PreparedStatement ps = dbConnection.prepareStatement(insertStmt);
 
-                        for(Object value : roasArray  ){
+                        for (Object value : roasArray) {
                             JSONObject json_roa = (JSONObject) value;
                             ps.setInt(1, json_roa.getIntValue("asn"));
                             PGobject dummyObject = new PGobject();
                             dummyObject.setType("cidr");
-                            dummyObject.setValue(json_roa.getString ("prefix"));
+                            dummyObject.setValue(json_roa.getString("prefix"));
                             ps.setObject(2, dummyObject, Types.OTHER);
                             ps.setInt(3, json_roa.getIntValue("maxLength"));
                             ps.setInt(4, 8);
@@ -103,7 +101,7 @@ public class RpkiRepoDownloader implements Runnable {
 
         } catch (IOException e) {
             e.printStackTrace();
-        } finally{
+        } finally {
             assert rpkiValidatorRestApiConnection != null;
             rpkiValidatorRestApiConnection.disconnect();
 
