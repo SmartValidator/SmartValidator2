@@ -27,15 +27,28 @@ public class ConflictArchiver implements Callable<Void>{
 
             Statement s;
             s = dbc.createStatement();
-            s.executeUpdate("insert into archive_snapshot_times (start) values (now());");
+            try{
+                s.executeUpdate("insert into archive_snapshot_times (start) values (now());");
+            }catch(Exception e){
+                System.out.println("Archive archive_snapshot_times fails, check if tale exists ");
+            }
+
 
             /* copy the validated_roas_verified_announcements table */
             s = dbc.createStatement();
-            s.executeUpdate("insert into archived_conflicts (prefix, reason) ( select prefix, route_validity from announcements inner join validated_roas_verified_announcements as vrva on announcements.id = vrva.verified_announcement_id where route_validity > 0 and not exists ( select verified_announcement_id from validated_roas_verified_announcements where route_validity = 0 and verified_announcement_id = vrva.verified_announcement_id ) group by prefix, route_validity ) on conflict (prefix, reason) do update set updated_at = now();");
+            try{
+                s.executeUpdate("insert into archived_conflicts (prefix, reason) ( select prefix, route_validity from announcements inner join validated_roas_verified_announcements as vrva on announcements.id = vrva.verified_announcement_id where route_validity > 0 and not exists ( select verified_announcement_id from validated_roas_verified_announcements where route_validity = 0 and verified_announcement_id = vrva.verified_announcement_id ) group by prefix, route_validity ) on conflict (prefix, reason) do update set updated_at = now();");
+            }catch(Exception e){
+                System.out.println("Archive archived_conflicts fails, check if tale exists ");
+            }
             s.close();
 
             s = dbc.createStatement();
-            s.executeUpdate("delete from archived_conflicts where updated_at < now() - interval '" + Integer.toString(conflict_timeout_days) + " days'");
+            try{
+                s.executeUpdate("delete from archived_conflicts where updated_at < now() - interval '" + Integer.toString(conflict_timeout_days) + " days'");
+            }catch(Exception e){
+                System.out.println("Archive archived_conflicts fails, check if tale exists ");
+            }
             s.close();
 
             dbc.commit();

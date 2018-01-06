@@ -29,8 +29,8 @@ public class ConflictTimeLine implements Runnable {
 //                );
         Statement stmt = resetConnection.createStatement();
 //                        ResultSet rs = stmt.executeQuery("CREATE TABLE validated_roas_rv_test ( id SERIAL (10) DEFAULT nextval('validated_roas_rv_test_id_seq':: REGCLASS ) NOT NULL\n" + "  CONSTRAINT validated_roas_rv_test_pkey\n" + "  PRIMARY KEY,\n" + "  asn          CIDR(max)    NOT NULL, max_length   INT4(10)     NOT NULL,  trust_anchor VARCHAR(255) NOT NULL\n" + "); COMMENT ON TABLE validated_roas_rv_test IS 'test table to be filled from the rpki validator run'");
-        stmt.execute("DROP TABLE IF EXISTS conflict_timeline");
-        stmt.execute("CREATE TABLE public.conflict_timeline\n" +
+        stmt.execute("DROP TABLE IF EXISTS timeline_conflicts");
+        stmt.execute("CREATE TABLE public.timeline_conflicts\n" +
                 "(\n" +
                 "  id INTEGER DEFAULT nextval('conflict_timeline_id_seq'::regclass) PRIMARY KEY NOT NULL,\n" +
                 "  count INTEGER,\n" +

@@ -4,9 +4,7 @@ import modules.helper.DbHandler;
 import org.postgresql.util.PGobject;
 
 import java.sql.*;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 
 import static java.sql.Types.OTHER;
@@ -86,6 +84,8 @@ public class ConflictHandler {
         private int trust_anchor_id;
         private Timestamp created_at;
         private Timestamp updated_at;
+        private boolean isFilter = false;
+        private boolean isWhitelist = false;
 
         public Roa(int id, long asn, String prefix, int max_length,
                    int trust_anchor_id, Timestamp created_at, Timestamp updated_at){
@@ -128,6 +128,10 @@ public class ConflictHandler {
         public int getTrust_anchor_id(){
             return trust_anchor_id;
         }
+
+        public void setFilter(){this.isFilter = true;}
+
+        public void setWhitelist(){this.isWhitelist = true;}
     }
 
     public class Announcement implements Comparable {
@@ -248,7 +252,7 @@ public class ConflictHandler {
         try{
             Statement stmt = connection.createStatement();
             ResultSet rs = stmt.executeQuery(
-                    "SELECT * FROM validated_roas_verified_announcements " +
+                    "SELECT * FROM conflicts_test " +
                             "ORDER BY verified_announcement_id");
             rs.next();
 
@@ -326,6 +330,22 @@ public class ConflictHandler {
 
     private void ignore(){}
 
+/*
+    private void filter(int days){
+        long now = System.currentTimeMillis();
+        for( int i = 0; i < overlaps.size(); i++ ){
+            Announcement announcement = overlaps.get(i).getAnnouncement();
+            if((now - announcement.getCreated_at().getTime()) / DAY > days){
+                List<Roa> roas = overlaps.get(i).getRoas();
+                for(int j = 0; j < roas.size(); j++){
+                    if(this.roas.conta this.roas.remove(ins(roas.get(j))) {
+                       this.roas.indexOf(roas.get(j)));
+                    }
+                }
+            }
+        }
+    }
+*/
     private void filter(int days){
         long now = System.currentTimeMillis();
         for( int i = 0; i < overlaps.size(); i++ ){
@@ -334,7 +354,7 @@ public class ConflictHandler {
                 List<Roa> roas = overlaps.get(i).getRoas();
                 for(int j = 0; j < roas.size(); j++){
                     if(this.roas.contains(roas.get(j))) {
-                        this.roas.remove(this.roas.indexOf(roas.get(j)));
+                        this.roas.get(this.roas.indexOf(roas.get(j))).setFilter();
                     }
                 }
             }
@@ -343,12 +363,15 @@ public class ConflictHandler {
 
     private void whitelist(int days){
         long now = System.currentTimeMillis();
+        Roa newRoa = null;
         for( int i = 0; i < overlaps.size(); i++ ){
             Announcement announcement = overlaps.get(i).getAnnouncement();
             if((now - announcement.getCreated_at().getTime()) / DAY > days){
                 int max_length = Integer.parseInt(announcement.prefix.split("/")[1]);
-                roas.add(new Roa(roas.size(), announcement.getAsn(), announcement.getPrefix(),
-                        max_length, 0, null, null));
+                newRoa = new Roa(roas.size(), announcement.getAsn(), announcement.getPrefix(),
+                        max_length, 0, null, null);
+                newRoa.setWhitelist();
+                roas.add(newRoa);
             }
         }
     }
@@ -409,6 +432,8 @@ public class ConflictHandler {
                 "    asn bigint NOT NULL,\n" +
                 "    prefix cidr NOT NULL,\n" +
                 "    max_length int NOT NULL,\n" +
+                "    filtered BOOLEAN DEFAULT false,\n" +
+                "    whitelisted BOOLEAN DEFAULT false,\n" +
                 "    created_at TIMESTAMP NOT NULL DEFAULT NOW(),\n" +
                 "    updated_at TIMESTAMP NOT NULL DEFAULT NOW()\n" +
                 ")");
@@ -416,22 +441,42 @@ public class ConflictHandler {
 
     }
 
-    private PreparedStatement collectRoas() throws ExecutionException {
+    private void collectRoas() throws ExecutionException {
         try{
             String papo = "INSERT INTO payload_roas " +
-                    "(asn, prefix, max_length) VALUES " + "(?, ?, ?)";
+                    "(asn, prefix, max_length, whitelisted, filtered) VALUES " + "(?, ?, ?, ?, ?)";
+            String updateFilter = "UPDATE payload_roas SET filtered = TRUE WHERE asn = ? AND prefix= ? AND max_length = ?";
             PreparedStatement ps = connection.prepareStatement(papo);
+            PreparedStatement psFilter =  connection.prepareStatement(updateFilter);
+            ResultSet rs;
+            Roa roa;
+            Statement stmt = connection.createStatement();
             for(int i = 0; i < roas.size(); i++){
-                Roa roa = roas.get(i);
+                roa = roas.get(i);
                 ps.setLong(1, roa.getAsn());
                 ps.setObject(2, roa.getPrefix(), OTHER);
                 ps.setInt(3, roa.getMax_length());
-//                if(i % 10000 == 0){
-//                    System.out.println("Elapsed " + i + " ROAs.");
-//                }
+                ps.setBoolean(4, roa.isWhitelist);
+                ps.setBoolean(5, roa.isFilter);
                 ps.addBatch();
+                if(roa.isFilter){
+                   rs = stmt.executeQuery("SELECT *\n" +
+                            "FROM validated_roas\n" +
+                            "WHERE INET '" + roa.prefix + "' <<=  prefix");
+                   while(rs.next()){
+                       psFilter.setLong(1, rs.getLong(2));
+                       psFilter.setObject(2, rs.getObject(3), OTHER);
+                       psFilter.setInt(3, rs.getInt(4));
+                       psFilter.addBatch();
+                   }
+                }
+                if(i % 500 == 0){
+                    System.out.println("Elapsed " + i + " ROAs.");
+                }
+
             }
-            return ps;
+            ps.executeBatch();
+            psFilter.executeBatch();
         }catch(Exception e){
             throw new ExecutionException(e);
         }
@@ -444,8 +489,7 @@ public class ConflictHandler {
             long start = System.currentTimeMillis();
 
             dropAndCreateTable();
-            PreparedStatement ps = collectRoas();
-            ps.executeBatch();
+            collectRoas();
 
             long end = System.currentTimeMillis();
             long diff = end - start;
