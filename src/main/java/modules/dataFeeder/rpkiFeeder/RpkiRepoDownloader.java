@@ -116,7 +116,4 @@ public class RpkiRepoDownloader implements Runnable {
 
     }
 
-    public static void main(String[] args){
-        (new RpkiRepoDownloader()).run();
-    }
 }
