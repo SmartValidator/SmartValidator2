@@ -443,7 +443,8 @@ public class ConflictHandler {
     private void collectRoas() throws ExecutionException {
         try{
             String papo = "INSERT INTO payload_roas " +
-                    "(asn, prefix, max_length, whitelisted, filtered) VALUES " + "(?, ?, ?, ?, ?)";
+                    "(asn, prefix, max_length, whitelisted, filtered) VALUES " + "(?, ?, ?, ?, ?)" +
+                    "ON CONFLICT (asn, prefix, max_length) DO UPDATE SET whitelisted =?, filtered = ?, updated_at = now()";
             String updateFilter = "UPDATE payload_roas SET filtered = TRUE WHERE asn = ? AND prefix= ? AND max_length = ?";
             PreparedStatement ps = connection.prepareStatement(papo);
             PreparedStatement psFilter =  connection.prepareStatement(updateFilter);
@@ -457,6 +458,8 @@ public class ConflictHandler {
                 ps.setInt(3, roa.getMax_length());
                 ps.setBoolean(4, roa.isWhitelist);
                 ps.setBoolean(5, roa.isFilter);
+                ps.setBoolean(6, roa.isWhitelist);
+                ps.setBoolean(7, roa.isFilter);
                 ps.addBatch();
                 if(roa.isFilter){
                    rs = stmt.executeQuery("SELECT *\n" +
@@ -487,7 +490,7 @@ public class ConflictHandler {
             System.out.println("Pushing ROAs, please stand by...");
             long start = System.currentTimeMillis();
 
-            dropAndCreateTable();
+//            dropAndCreateTable();
             collectRoas();
 
             long end = System.currentTimeMillis();
