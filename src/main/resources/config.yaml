@@ -1,4 +1,5 @@
 general:
+  backendPort: 6662
 logger:
 database:
   host: smart-validator.net #server host address - default is smart-validator.net
