@@ -66,15 +66,17 @@ public class SmartValidator {
             onGoingValidationRun.lock();
             bgpRisDownloadTask = executor.submit(new BgpRisFeederControlThread());
             RpkiFeeder.getInstance().startRpkiRepoDownload();
-            conflictArchivationTask = executor.submit(new ConflictArchiver()); //TODO make sure base tables arent empty
-            resolvingArchivationTask = executor.submit(new ResolverArchiver());
+
             bgpRisDownloadTask.get();
+            //TODO: add config yaml if to use bmp ornot
 
             ConflictSeeker conflictSeeker = new ConflictSeeker();
             ConflictHandler conflictHandler = new ConflictHandler();
             conflictSeeker.run();
             conflictHandler.run();
 
+            conflictArchivationTask = executor.submit(new ConflictArchiver()); //TODO make sure base tables arent empty
+            resolvingArchivationTask = executor.submit(new ResolverArchiver());
 
             if (isSimulatorMode()) {
 
@@ -155,6 +157,7 @@ public class SmartValidator {
             switch (httpExchange.getHttpContext().getPath()) {
                 case "/modeChange":
                     onGoingValidationRun.lock();
+                    //TODO: we dont rea;;y need to do something in the pipeline just make sure RTR works!
                     try {
                         Thread main = new Thread(() -> {
                             try {

@@ -52,8 +52,10 @@ public class ConflictSeeker {
 
             ResultSet rs;
             int roas_counter = 0;
-            String papo = "INSERT INTO validated_roas_verified_announcements(announcement_id, validated_roa_id, route_validity)" +
-                    " VALUES" + "(?, ?, ?)";
+            String papo = "INSERT INTO" +
+                    " validated_roas_verified_announcements(announcement_id, validated_roa_id, route_validity)" +
+                    " VALUES (?, ?, ?) ON CONFLICT (announcement_id, validated_roa_id, route_validity)" +
+                    " DO UPDATE SET updated_at = now()";
             PreparedStatement ps = connection.prepareStatement(papo);
             for(Roa roa : validated_roas){
                 if(roas_counter % 1000 == 0 && roas_counter > 0){
@@ -122,7 +124,7 @@ public class ConflictSeeker {
             validated_roas = new ArrayList<>();
             this.connectToDB();
             this.getRoas();
-            this.dropAndCreateTable();
+//            this.dropAndCreateTable();
             PreparedStatement ps = this.detectOverlap();
             ps.executeBatch();
         }catch(Exception e){

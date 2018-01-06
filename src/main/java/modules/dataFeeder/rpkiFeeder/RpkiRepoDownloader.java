@@ -55,25 +55,25 @@ public class RpkiRepoDownloader implements Runnable {
                         assert dbConnection != null;
                         Statement stmt = dbConnection.createStatement();
 //                        ResultSet rs = stmt.executeQuery("CREATE TABLE validated_roas_rv_test ( id SERIAL (10) DEFAULT nextval('validated_roas_rv_test_id_seq':: REGCLASS ) NOT NULL\n" + "  CONSTRAINT validated_roas_rv_test_pkey\n" + "  PRIMARY KEY,\n" + "  asn          CIDR(max)    NOT NULL, max_length   INT4(10)     NOT NULL,  trust_anchor VARCHAR(255) NOT NULL\n" + "); COMMENT ON TABLE validated_roas_rv_test IS 'test table to be filled from the rpki validator run'");
-                        stmt.execute("DROP TABLE IF EXISTS rpki_validated_roas");
-                        stmt.execute("CREATE TABLE public.rpki_validated_roas\n" +
-                                "(\n" +
-                                "    id INTEGER DEFAULT nextval('validated_roas_id_seq'::regclass) PRIMARY KEY NOT NULL,\n" +
-                                "    asn BIGINT NOT NULL,\n" +
-                                "    prefix CIDR NOT NULL,\n" +
-                                "    max_length INTEGER NOT NULL,\n" +
-                                "    filtered BOOLEAN DEFAULT false,\n" +
-                                "    whitelisted BOOLEAN DEFAULT false,\n" +
-                                "    trust_anchor_id INTEGER,\n" +
-                                "    created_at TIMESTAMP DEFAULT now() NOT NULL,\n" +
-                                "    updated_at TIMESTAMP DEFAULT now() NOT NULL,\n" +
-                                "    CONSTRAINT validated_roas_trust_anchor_id_fkey FOREIGN KEY (trust_anchor_id) REFERENCES trust_anchors (id)\n" +
-                                ")");
-                        stmt.execute("CREATE UNIQUE INDEX validated_roas_pkey ON public.validated_roas (id)");
-                        stmt.execute("CREATE INDEX idx_validated_roas_prefix ON public.validated_roas (prefix)");
+//                        stmt.execute("DROP TABLE IF EXISTS validated_roas");
+//                        stmt.execute("CREATE TABLE public.validated_roas\n" +
+//                                "(\n" +
+//                                "    id INTEGER DEFAULT nextval('validated_roas_id_seq'::regclass) PRIMARY KEY NOT NULL,\n" +
+//                                "    asn BIGINT NOT NULL,\n" +
+//                                "    prefix CIDR NOT NULL,\n" +
+//                                "    max_length INTEGER NOT NULL,\n" +
+//                                "    filtered BOOLEAN DEFAULT false,\n" +
+//                                "    whitelisted BOOLEAN DEFAULT false,\n" +
+//                                "    trust_anchor_id INTEGER,\n" +
+//                                "    created_at TIMESTAMP DEFAULT now() NOT NULL,\n" +
+//                                "    updated_at TIMESTAMP DEFAULT now() NOT NULL,\n" +
+//                                "    CONSTRAINT validated_roas_trust_anchor_id_fkey FOREIGN KEY (trust_anchor_id) REFERENCES trust_anchors (id)\n" +
+//                                ")");
 
 
-                        String insertStmt = "INSERT INTO rpki_validated_roas(asn,prefix,max_length,trust_anchor_id) VALUES (?, ?, ?, ?)";
+                        String insertStmt = "INSERT INTO validated_roas(asn,prefix,max_length,trust_anchor_id) VALUES (?, ?, ?, ?)" +
+                                "ON CONFLICT" +
+                                "(asn, prefix, max_length) DO UPDATE SET trust_anchor_id = ?, updated_at = now() ";
                         PreparedStatement ps = dbConnection.prepareStatement(insertStmt);
 
                         for (Object value : roasArray) {
@@ -84,7 +84,9 @@ public class RpkiRepoDownloader implements Runnable {
                             dummyObject.setValue(json_roa.getString("prefix"));
                             ps.setObject(2, dummyObject, Types.OTHER);
                             ps.setInt(3, json_roa.getIntValue("maxLength"));
+                            //TODO we need to build a map between RIPE flags to ours.
                             ps.setInt(4, 8);
+                            ps.setInt(5, 8);
                             ps.addBatch();
 
 
@@ -112,5 +114,9 @@ public class RpkiRepoDownloader implements Runnable {
 
         }
 
+    }
+
+    public static void main(String[] args){
+        (new RpkiRepoDownloader()).run();
     }
 }

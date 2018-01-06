@@ -34,16 +34,16 @@ public class BgpRisFeederControlThread implements Runnable {
         try (Connection dbConnection = DbHandler.produceConnection()) {
             assert dbConnection != null;
             Statement stmt = dbConnection.createStatement();
-            stmt.execute("DROP TABLE IF EXISTS announcements");
-            stmt.execute("CREATE TABLE public.announcements\n" +
-                    "(\n" +
-                    "  id INT DEFAULT nextval('validated_roas_id_seq'::REGCLASS) PRIMARY KEY NOT NULL,\n" +
-                    "  asn BIGINT NOT NULL,\n" +
-                    "  prefix CIDR NOT NULL,\n" +
-//                                "  ris_peers BIGINT NOT NULL,\n" +
-                    "  created_at TIMESTAMP DEFAULT now() NOT NULL,\n" +
-                    "  updated_at TIMESTAMP DEFAULT now() NOT NULL\n" +
-                    ");\n");
+//            stmt.execute("DROP TABLE IF EXISTS announcements");
+//            stmt.execute("CREATE TABLE public.announcements\n" +
+//                    "(\n" +
+//                    "  id INT DEFAULT nextval('validated_roas_id_seq'::REGCLASS) PRIMARY KEY NOT NULL,\n" +
+//                    "  asn BIGINT NOT NULL,\n" +
+//                    "  prefix CIDR NOT NULL,\n" +
+////                                "  ris_peers BIGINT NOT NULL,\n" +
+//                    "  created_at TIMESTAMP DEFAULT now() NOT NULL,\n" +
+//                    "  updated_at TIMESTAMP DEFAULT now() NOT NULL\n" +
+//                    ");\n");
 
             connectAndDownload("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz", dbConnection);
             connectAndDownload("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz", dbConnection);
@@ -78,7 +78,8 @@ public class BgpRisFeederControlThread implements Runnable {
 
                     try {
                         assert dbConnection != null;
-                        String insertStmt = "INSERT INTO global_announcements(asn,prefix) VALUES (?, ?)";
+                        String insertStmt = "INSERT INTO announcements(asn,prefix) VALUES (?, ?)" +
+                                "ON CONFLICT (asn,prefix) DO UPDATE SET updated_at= now()";
                         PreparedStatement ps = dbConnection.prepareStatement(insertStmt);
 
                         int i = 0;
