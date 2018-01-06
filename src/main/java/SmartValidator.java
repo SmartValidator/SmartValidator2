@@ -3,9 +3,9 @@ import modules.archiver.ResolverArchiver;
 import modules.conflictHandler.ConflictHandler;
 import modules.conflictSeeker.ConflictSeeker;
 import modules.dataFeeder.Feeder;
+import modules.dataFeeder.risFeeder.BgpRisFeederControlThread;
 import modules.dataFeeder.rpkiFeeder.RpkiFeeder;
 import modules.helper.DbHandler;
-import modules.helper.options.OptionsHandler;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
@@ -20,39 +20,54 @@ public class SmartValidator {
             = Executors.newFixedThreadPool(NTHREADS);
 
 
-    public static void main(String args[]) {
-
+    public static void main(String args[])  {
+        ScheduledExecutorService scheduler = null;
         try {
-            //Init option handler
-            OptionsHandler optionsHandler = OptionsHandler.getInstance();
             //Init feeder and startRpkiValidator raw data information flowing
             Feeder.getInstance().startRawDataFeed();
-
-
-
-            regularUpdate();
-        } catch (ExecutionException | InterruptedException e) {
+            ScheduledFuture<?> scheduledFuture;
+            scheduler = new ScheduledThreadPoolExecutor(1);
+            Thread main = new Thread(() -> {
+                try {
+                    regularUpdate();
+                } catch (ExecutionException | InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            main.setUncaughtExceptionHandler((t, e) -> {
+                throw new RuntimeException(e);
+            });
+            scheduledFuture = scheduler.scheduleAtFixedRate(main, 0, 15, TimeUnit.SECONDS);
+            scheduledFuture.get();
+        } catch (InterruptedException | ExecutionException e) {
             e.printStackTrace();
+        } finally {
+            if(scheduler != null){
+                scheduler.shutdown();
+                Feeder.getInstance().stopRawDataFeed();
+            }
         }
-        //Init thread worker pool
     }
 
     private static void regularUpdate() throws ExecutionException, InterruptedException {
         Future<Void> conflictArchivationTask = null;
         Future<Void> resolvingArchivationTask = null;
-
+        Future<?> bgpRisDownloadTask = null;
+        Integer a = Integer.parseInt("XTX");
         try {
+            bgpRisDownloadTask = executor.submit(new BgpRisFeederControlThread());
             RpkiFeeder.getInstance().startRpkiRepoDownload();
             conflictArchivationTask = executor.submit(new ConflictArchiver()); //TODO make sure base tables arent empty
             resolvingArchivationTask = executor.submit(new ResolverArchiver());
+            bgpRisDownloadTask.get();
+
             ConflictSeeker conflictSeeker = new ConflictSeeker();
             ConflictHandler conflictHandler = new ConflictHandler();
             conflictSeeker.run();
             conflictHandler.run();
 
 
-
-            if(isSimulatorMode()){
+            if (isSimulatorMode()) {
 
             } else {
 
@@ -66,8 +81,10 @@ public class SmartValidator {
             if (resolvingArchivationTask != null) {
                 resolvingArchivationTask.get();
             }
+            if (bgpRisDownloadTask != null) {
+                bgpRisDownloadTask.get();
+            }
         }
-
 
 
     }
@@ -86,4 +103,5 @@ public class SmartValidator {
         }
         return settings;
     }
+
 }

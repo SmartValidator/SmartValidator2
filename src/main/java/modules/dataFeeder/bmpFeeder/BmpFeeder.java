@@ -41,7 +41,7 @@ public class BmpFeeder  implements Runnable {
 
         public void close() {
             scheduledThreadPool.shutdown();
-            condVar.signal();
+//            condVar.signal();
         }
 
         public static BmpFeeder getInstance() {

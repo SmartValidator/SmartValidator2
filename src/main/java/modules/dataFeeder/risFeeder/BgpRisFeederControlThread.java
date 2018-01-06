@@ -9,6 +9,7 @@ import java.net.MalformedURLException;
 import java.net.ProtocolException;
 import java.net.URL;
 import java.sql.*;
+import java.util.concurrent.ExecutionException;
 import java.util.zip.GZIPInputStream;
 
 
@@ -47,6 +48,8 @@ public class BgpRisFeederControlThread implements Runnable {
             connectAndDownload("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz", dbConnection);
         connectAndDownload("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz", dbConnection);
         } catch (SQLException e) {
+            e.printStackTrace();
+        } catch (ExecutionException e) {
             e.printStackTrace();
         }
     }
@@ -130,9 +133,6 @@ public class BgpRisFeederControlThread implements Runnable {
         }
     }
 
-    public static void main(String args[]){
-            (new BgpRisFeederControlThread()).run();
-        }
 }
 
 

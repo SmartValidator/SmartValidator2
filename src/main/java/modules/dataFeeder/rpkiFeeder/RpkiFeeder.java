@@ -11,7 +11,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class RpkiFeeder implements Runnable {
     private static RpkiFeeder instance = null;
     private RpkiValidatorControlThread rpkiValidatorControlThread = null;
-    private ScheduledExecutorService scheduledThreadPool = null;
+//    private ScheduledExecutorService scheduledThreadPool = null;
     private Lock aLock = new ReentrantLock();
     private Condition condVar = aLock.newCondition();
     private Thread thread_handle = null;
@@ -40,9 +40,9 @@ public class RpkiFeeder implements Runnable {
     }
 
     public void close() {
-        scheduledThreadPool.shutdown();
+//        scheduledThreadPool.shutdown();
         rpkiValidatorControlThread.stop();
-        condVar.signal();
+//        condVar.signal();
     }
 
     public static RpkiFeeder getInstance() {
