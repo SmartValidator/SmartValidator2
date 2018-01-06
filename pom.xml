@@ -19,7 +19,6 @@
                 </configuration>
             </plugin>
             <plugin>
-
                 <artifactId>maven-assembly-plugin</artifactId>
                 <executions>
                     <execution>
@@ -41,7 +40,6 @@
                     </descriptorRefs>
                 </configuration>
             </plugin>
-
         </plugins>
 
         <resources>

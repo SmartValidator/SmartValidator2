@@ -1,6 +1,8 @@
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+import modules.archiver.ConflictArchiver;
+import modules.archiver.ResolverArchiver;
 import modules.conflictHandler.ConflictHandler;
 import modules.conflictSeeker.ConflictSeeker;
 import modules.dataFeeder.Feeder;
@@ -26,9 +28,9 @@ public class SmartValidator {
     private static final ExecutorService executor
             = Executors.newFixedThreadPool(NTHREADS);
     private static ReentrantLock onGoingValidationRun = new ReentrantLock();
-    private static Condition onGoingValidationRunCondition = onGoingValidationRun.newCondition();
     private static HttpServer server = null;
     private static ScheduledExecutorService scheduler = null;
+
     public static void main(String args[])  {
         scheduler = new ScheduledThreadPoolExecutor(2);
 
@@ -48,10 +50,8 @@ public class SmartValidator {
             ScheduledFuture<?> scheduledFuture = scheduler.scheduleAtFixedRate(main, 0, 300, TimeUnit.MINUTES);
             backendServer();
             scheduledFuture.get();
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (InterruptedException | ExecutionException | IOException e) {
             e.printStackTrace();;
-        } catch (IOException e) {
-            e.printStackTrace();
         } finally {
             shutdown();
         }
@@ -66,8 +66,8 @@ public class SmartValidator {
             onGoingValidationRun.lock();
             bgpRisDownloadTask = executor.submit(new BgpRisFeederControlThread());
             RpkiFeeder.getInstance().startRpkiRepoDownload();
-//            conflictArchivationTask = executor.submit(new ConflictArchiver()); //TODO make sure base tables arent empty
-//            resolvingArchivationTask = executor.submit(new ResolverArchiver());
+            conflictArchivationTask = executor.submit(new ConflictArchiver()); //TODO make sure base tables arent empty
+            resolvingArchivationTask = executor.submit(new ResolverArchiver());
             bgpRisDownloadTask.get();
 
             ConflictSeeker conflictSeeker = new ConflictSeeker();
