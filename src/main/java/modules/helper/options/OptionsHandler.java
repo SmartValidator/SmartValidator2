@@ -29,8 +29,6 @@ public class OptionsHandler {
             rwl.writeLock().lock();
             final ObjectMapper mapper = new ObjectMapper(new YAMLFactory()); // jackson databind
             options = mapper.readValue(file, ConfigYamlFile.class);
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }finally {

@@ -139,7 +139,9 @@ public class SmartValidator {
     }
 
     private static void shutdown(){
-        server.stop(5);
+        if (server != null) {
+            server.stop(5);
+        }
         if(scheduler != null){
             scheduler.shutdown();
         }
