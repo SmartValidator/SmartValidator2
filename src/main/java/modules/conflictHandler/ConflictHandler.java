@@ -193,15 +193,14 @@ public class ConflictHandler {
     /*----- Data Loading -----*/
 
     /**
-     * Loads the table of verified BPG announcements from the database.
+     * Loads the table of BPG announcements from the database.
      */
     private void loadAnnouncements() throws ExecutionException {
         this.announcements = new ArrayList<>();
         try{
             Statement stmt = connection.createStatement();
             ResultSet rs = stmt.executeQuery(
-                    "SELECT id, asn, prefix, created_at, updated_at FROM announcements WHERE id IN " +
-                            "(SELECT announcement_id FROM verified_announcements)");
+                    "SELECT id, asn, prefix, created_at, updated_at FROM announcements");
             while(rs.next()){
                 announcements.add(new Announcement(
                         rs.getInt("id"),
@@ -252,8 +251,8 @@ public class ConflictHandler {
         try{
             Statement stmt = connection.createStatement();
             ResultSet rs = stmt.executeQuery(
-                    "SELECT * FROM conflicts_test " +
-                            "ORDER BY verified_announcement_id");
+                    "SELECT * FROM validated_roas_verified_announcements " +
+                            "ORDER BY announcement_id");
             rs.next();
 
             int previousAnnouncement_id;
