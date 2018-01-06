@@ -46,7 +46,7 @@ public class BgpRisFeederControlThread implements Runnable {
 //                    ");\n");
 
             connectAndDownload("http://www.ris.ripe.net/dumps/riswhoisdump.IPv4.gz", dbConnection);
-        connectAndDownload("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz", dbConnection);
+            connectAndDownload("http://www.ris.ripe.net/dumps/riswhoisdump.IPv6.gz", dbConnection);
         } catch (SQLException e) {
             e.printStackTrace();
         } catch (ExecutionException e) {
