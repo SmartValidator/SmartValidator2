@@ -1,8 +1,7 @@
 general:
-  backendPort: 6662
 logger:
 database:
-  host: smart-validator.net #server host address - default is smart-validator.net
-  name: smart_validator_test_6 #actual database name
+  host: localhost:8000 #server host address - default is smart-validator.net
+  name: smart_validator_test_7 #actual database name
   user: svt1 #username
   password: XagO7kfuGA1ZMxhP45u7zkna7eMB235zSTfCSzFpOy76OckuubXqlCxGyyC #password
