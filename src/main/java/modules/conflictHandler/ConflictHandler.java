@@ -11,8 +11,8 @@ import static java.sql.Types.OTHER;
 
 public class ConflictHandler {
 
-    private List<Announcement> announcements;
-    private List<Roa> roas;
+    private Map<Integer, Announcement> announcements;
+    private Map<Integer, Roa> roas;
     private List<Overlap> overlaps;
 
     private static final long DAY = 86400000;
@@ -33,6 +33,11 @@ public class ConflictHandler {
             roaEntrys.add(roaEntry);
         }
 
+        public Overlap(Announcement announcement) {
+            this.announcement = announcement;
+            roaEntrys = new ArrayList<>();
+        }
+
         public Announcement getAnnouncement(){
             return announcement;
         }
@@ -43,6 +48,14 @@ public class ConflictHandler {
 
         public List<RoaEntry> getRoaEntrys() {
             return roaEntrys;
+        }
+
+        public Map<Roa, Integer> getRoasWithId() {
+            Map<Roa, Integer> roasWithId = new HashMap<>();
+            for (int i = 0; i < roaEntrys.size(); i++){
+                roasWithId.put(roaEntrys.get(i).getRoa(), roaEntrys.get(i).getRoaId());
+            }
+            return roasWithId;
         }
 
         public List<Roa> getRoas(){
@@ -56,12 +69,14 @@ public class ConflictHandler {
 
     public class RoaEntry {
         private Roa roa;
+        private int roaId;
         private int route_validity;
         private Timestamp created_at;
         private Timestamp updated_at;
 
-        public RoaEntry(Roa roa, int route_validity, Timestamp created_at, Timestamp updated_at){
+        public RoaEntry(Roa roa, int roaId, int route_validity, Timestamp created_at, Timestamp updated_at){
             this.roa = roa;
+            this.roaId = roaId;
             this.route_validity = route_validity;
             this.created_at = created_at;
             this.updated_at = updated_at;
@@ -71,13 +86,16 @@ public class ConflictHandler {
     		return this.roa;
     	}
 
+    	public int getRoaId() {
+            return roaId;
+        }
+
         public int getValidity(){
             return this.route_validity;
         }
     }
 
-    public class Roa  implements Comparable {
-        private int id;
+    public class Roa {
         private long asn;
         private String prefix;
         private int max_length;
@@ -87,30 +105,14 @@ public class ConflictHandler {
         private boolean isFilter = false;
         private boolean isWhitelist = false;
 
-        public Roa(int id, long asn, String prefix, int max_length,
+        public Roa(long asn, String prefix, int max_length,
                    int trust_anchor_id, Timestamp created_at, Timestamp updated_at){
-            this.id = id;
             this.asn = asn;
             this.prefix = prefix;
             this.max_length = max_length;
             this.trust_anchor_id = trust_anchor_id;
             this.created_at = created_at;
             this.updated_at = updated_at;
-        }
-
-        @Override
-        public String toString(){
-            return this.id + "\t" + this.asn + "\t" + this.prefix + "\t" + this.max_length + "\t" + "\t" + this.trust_anchor_id + "\t" + this.created_at + "\t" + this.updated_at;
-        }
-
-        @Override
-        public int compareTo(Object o){
-            Roa other = (Roa) o;
-            return getId() - other.getId();
-        }
-
-        public int getId(){
-            return id;
         }
 
         public long getAsn(){
@@ -134,29 +136,17 @@ public class ConflictHandler {
         public void setWhitelist(){this.isWhitelist = true;}
     }
 
-    public class Announcement implements Comparable {
-        private int id;
+    public class Announcement {
         private long asn;
         private String prefix;
         private Timestamp created_at;
         private Timestamp updated_at;
 
-        public Announcement(int id, long asn, String prefix, Timestamp created_at, Timestamp updated_at){
-            this.id = id;
+        public Announcement(long asn, String prefix, Timestamp created_at, Timestamp updated_at){
             this.asn = asn;
             this.prefix = prefix;
             this.created_at = created_at;
             this.updated_at = updated_at;
-        }
-
-        @Override
-        public int compareTo(Object o){
-            Announcement other = (Announcement) o;
-            return getId() - other.getId();
-        }
-
-        public int getId(){
-            return id;
         }
 
         public long getAsn() {
@@ -196,50 +186,57 @@ public class ConflictHandler {
      * Loads the table of BPG announcements from the database.
      */
     private void loadAnnouncements() throws ExecutionException {
-        this.announcements = new ArrayList<>();
+        this.announcements = new HashMap<>();
         try{
-            Statement stmt = connection.createStatement();
-            ResultSet rs = stmt.executeQuery(
-                    "SELECT id, asn, prefix, created_at, updated_at FROM announcements");
+            ResultSet rs = connection.createStatement().executeQuery(
+                    "SELECT id, asn, prefix, created_at, updated_at FROM announcements"
+            );
             while(rs.next()){
-                announcements.add(new Announcement(
-                        rs.getInt("id"),
-                        rs.getLong("asn"),
-                        rs.getString("prefix"),
-                        rs.getTimestamp("created_at"),
-                        rs.getTimestamp("updated_at")
-                ));
-//                if(announcements.size() % 100000 == 0){
-//                    System.out.println("Loaded " + announcements.size() + " announcements.");
-//                }
+                announcements.put(rs.getInt("id"),
+                        new Announcement(
+                                rs.getLong("asn"),
+                                rs.getString("prefix"),
+                                rs.getTimestamp("created_at"),
+                                rs.getTimestamp("updated_at")
+                        )
+                );
+                if(announcements.size() % 100000 == 0){
+                    System.out.println("Loaded " + announcements.size() + " announcements.");
+                }
             }
         }catch(Exception e){
             throw new ExecutionException(e);
         }
-        Collections.sort(announcements);
     }
 
     /**
      * Loads the ROA table from the database.
      */
     private void loadRoas() throws ExecutionException {
-        roas = new ArrayList<>();
+        roas = new HashMap<>();
         try{
-            Statement stmt = connection.createStatement();
-            ResultSet rs = stmt.executeQuery("SELECT * FROM validated_roas ORDER BY id");
-
+            ResultSet rs = connection.createStatement().executeQuery(
+                    "SELECT id, asn, prefix, max_length," +
+                            " trust_anchor_id, created_at, updated_at FROM validated_roas"
+            );
             while(rs.next()){
-                int id = rs.getInt(1);
-                roas.add( new Roa(id, rs.getLong(2), rs.getString(3), rs.getInt(4),
-                        rs.getInt(7), rs.getTimestamp(8), rs.getTimestamp(9)));
-//                if(roas.size() % 10000 == 0){
-//                    System.out.println("Loaded " + roas.size() + " ROAs.");
-//                }
+               roas.put(rs.getInt("id"),
+                        new Roa(
+                                rs.getLong("asn"),
+                                rs.getString("prefix"),
+                                rs.getInt("max_length"),
+                                rs.getInt("trust_anchor_id"),
+                                rs.getTimestamp("created_at"),
+                                rs.getTimestamp("updated_at")
+                        )
+                );
+                if(roas.size() % 10000 == 0){
+                    System.out.println("Loaded " + roas.size() + " ROAs.");
+                }
             }
         }catch(Exception e){
             throw new ExecutionException(e);
         }
-        Collections.sort(roas);
     }
 
     /**
@@ -249,49 +246,77 @@ public class ConflictHandler {
     private void loadOverlaps() throws ExecutionException {
         overlaps = new ArrayList<>();
         try{
-            Statement stmt = connection.createStatement();
-            ResultSet rs = stmt.executeQuery(
-                    "SELECT * FROM validated_roas_verified_announcements " +
-                            "ORDER BY announcement_id");
+            ResultSet rs = connection.createStatement().executeQuery(
+                    "SELECT id, announcement_id, validated_roa_id," +
+                            " route_validity, created_at, updated_at" +
+                            " FROM validated_roas_verified_announcements" +
+                            " ORDER BY announcement_id"
+            );
             rs.next();
+            int previous_announcement_id = rs.getInt("announcement_id");
+            Overlap overlap = new Overlap(announcements.get(previous_announcement_id));
 
-            int previousAnnouncement_id;
-            int announcement_id = rs.getInt(2);
-            Announcement announcement = announcements.get(announcement_id - 1);
-
-            int roa_id = rs.getInt(3);
-            Roa roa = roas.get(roa_id - 1);
-            int route_validity = rs.getInt(4);
-            Timestamp created_at = rs.getTimestamp(5);
-            Timestamp updated_at = rs.getTimestamp(6);
-            RoaEntry roaEntry = new RoaEntry(roa, route_validity, created_at, updated_at);
-
-            Overlap conflict = new Overlap(announcement, roaEntry);
-
-            while(rs.next()){
-                previousAnnouncement_id = announcement_id;
-                announcement_id = rs.getInt(2);
-                announcement = announcements.get(announcement_id - 1);
-
-                roa_id = rs.getInt(3);
-                roa = roas.get(roa_id - 1);
-                route_validity = rs.getInt(4);
-                created_at = rs.getTimestamp(5);
-                updated_at = rs.getTimestamp(6);
-                roaEntry = new RoaEntry(roa, route_validity, created_at, updated_at);
-                if(announcement_id == previousAnnouncement_id){
-                    conflict.addRoa(roaEntry);
-                }else{
-                    overlaps.add(conflict);
-                    conflict = new Overlap(announcement, roaEntry);
+            do {
+                RoaEntry roaEntry = new RoaEntry(
+                        roas.get(rs.getInt("validated_roa_id")),
+                        rs.getInt("validated_roa_id"),
+                        rs.getInt("route_validity"),
+                        rs.getTimestamp("created_at"),
+                        rs.getTimestamp("updated_at")
+                );
+                if(previous_announcement_id == rs.getInt("announcement_id")) {
+                    overlap.addRoa(roaEntry);
+                } else {
+                    overlaps.add(overlap);
                 }
+                previous_announcement_id = rs.getInt("announcement_id");
+                if(overlaps.size() % 10000 == 0){
+                    System.out.println("Loaded " + overlaps.size() + " overlaps.");
+                }
+            } while(rs.next());
+
+            if(!overlaps.contains(overlap)) {
+                overlaps.add(overlap);
+            }
+//            rs.next();
+//
+//            int previousAnnouncement_id;
+//            int announcement_id = rs.getInt(2);
+//            Announcement announcement = announcements.get(announcement_id - 1);
+//
+//            int roa_id = rs.getInt(3);
+//            Roa roa = roas.get(roa_id - 1);
+//            int route_validity = rs.getInt(4);
+//            Timestamp created_at = rs.getTimestamp(5);
+//            Timestamp updated_at = rs.getTimestamp(6);
+//            RoaEntry roaEntry = new RoaEntry(roa, route_validity, created_at, updated_at);
+//
+//            Overlap conflict = new Overlap(announcement, roaEntry);
+//
+//            while(rs.next()){
+//                previousAnnouncement_id = announcement_id;
+//                announcement_id = rs.getInt(2);
+//                announcement = announcements.get(announcement_id - 1);
+//
+//                roa_id = rs.getInt(3);
+//                roa = roas.get(roa_id - 1);
+//                route_validity = rs.getInt(4);
+//                created_at = rs.getTimestamp(5);
+//                updated_at = rs.getTimestamp(6);
+//                roaEntry = new RoaEntry(roa, route_validity, created_at, updated_at);
+//                if(announcement_id == previousAnnouncement_id){
+//                    conflict.addRoa(roaEntry);
+//                }else{
+//                    overlaps.add(conflict);
+//                    conflict = new Overlap(announcement, roaEntry);
+//                }
 //                if(overlaps.size() % 10000 == 0){
 //                    System.out.println("Loaded " + overlaps.size() + " overlaps.");
 //                }
-            }
-            if(!overlaps.contains(conflict)){
-                overlaps.add(conflict);
-            }
+//            }
+//            if(!overlaps.contains(conflict)){
+//                overlaps.add(conflict);
+//            }
         }catch(Exception e){
             throw new ExecutionException(e);
         }
@@ -350,10 +375,14 @@ public class ConflictHandler {
         for( int i = 0; i < overlaps.size(); i++ ){
             Announcement announcement = overlaps.get(i).getAnnouncement();
             if((now - announcement.getCreated_at().getTime()) / DAY > days){
-                List<Roa> roas = overlaps.get(i).getRoas();
-                for(int j = 0; j < roas.size(); j++){
-                    if(this.roas.contains(roas.get(j))) {
-                        this.roas.get(this.roas.indexOf(roas.get(j))).setFilter();
+                List<Roa> roasToBeFiltered = overlaps.get(i).getRoas();
+                Map<Roa, Integer> roasToBeFilteredWithKeys = overlaps.get(i).getRoasWithId();
+                for(int j = 0; j < roasToBeFiltered.size(); j++){
+//                    if(this.roas.contains(roas.get(j))) {
+//                        this.roas.get(this.roas.indexOf(roas.get(j))).setFilter();
+//                    }
+                    if(roas.containsValue(roasToBeFiltered.get(j))) {
+                        roas.get(roasToBeFilteredWithKeys.get(roasToBeFiltered.get(j)));
                     }
                 }
             }
@@ -367,10 +396,10 @@ public class ConflictHandler {
             Announcement announcement = overlaps.get(i).getAnnouncement();
             if((now - announcement.getCreated_at().getTime()) / DAY > days){
                 int max_length = Integer.parseInt(announcement.prefix.split("/")[1]);
-                newRoa = new Roa(roas.size(), announcement.getAsn(), announcement.getPrefix(),
+                newRoa = new Roa(announcement.getAsn(), announcement.getPrefix(),
                         max_length, 0, null, null);
                 newRoa.setWhitelist();
-                roas.add(newRoa);
+                roas.put(-(i + 1), newRoa);
             }
         }
     }
