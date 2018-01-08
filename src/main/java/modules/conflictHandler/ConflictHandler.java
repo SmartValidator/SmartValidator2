@@ -478,10 +478,8 @@ public class ConflictHandler {
             PreparedStatement ps = connection.prepareStatement(papo);
             PreparedStatement psFilter =  connection.prepareStatement(updateFilter);
             ResultSet rs;
-            Roa roa;
             Statement stmt = connection.createStatement();
-            for(int i = 0; i < roas.size(); i++){
-                roa = roas.get(i);
+            for(Roa roa : roas.values()){
                 ps.setLong(1, roa.getAsn());
                 ps.setObject(2, roa.getPrefix(), OTHER);
                 ps.setInt(3, roa.getMax_length());
@@ -500,9 +498,6 @@ public class ConflictHandler {
                        psFilter.setInt(3, rs.getInt(4));
                        psFilter.addBatch();
                    }
-                }
-                if(i % 500 == 0){
-                    System.out.println("Elapsed " + i + " ROAs.");
                 }
 
             }
