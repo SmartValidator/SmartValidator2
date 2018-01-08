@@ -253,10 +253,12 @@ public class ConflictHandler {
                             " ORDER BY announcement_id"
             );
             rs.next();
-            int previous_announcement_id = rs.getInt("announcement_id");
-            Overlap overlap = new Overlap(announcements.get(previous_announcement_id));
+            int current_announcement_id = rs.getInt("announcement_id");
+            int previous_announcement_id = current_announcement_id;
+            Overlap overlap = new Overlap(announcements.get(current_announcement_id));
 
             do {
+                current_announcement_id = rs.getInt("announcement_id");
                 RoaEntry roaEntry = new RoaEntry(
                         roas.get(rs.getInt("validated_roa_id")),
                         rs.getInt("validated_roa_id"),
@@ -264,12 +266,13 @@ public class ConflictHandler {
                         rs.getTimestamp("created_at"),
                         rs.getTimestamp("updated_at")
                 );
-                if(previous_announcement_id == rs.getInt("announcement_id")) {
+                if(previous_announcement_id == current_announcement_id) {
                     overlap.addRoa(roaEntry);
                 } else {
                     overlaps.add(overlap);
+                    overlap = new Overlap(announcements.get(current_announcement_id));
                 }
-                previous_announcement_id = rs.getInt("announcement_id");
+                previous_announcement_id = current_announcement_id;
                 if(overlaps.size() % 10000 == 0){
                     System.out.println("Loaded " + overlaps.size() + " overlaps.");
                 }
@@ -371,20 +374,26 @@ public class ConflictHandler {
     }
 */
     private void filter(int days){
+        List<RoaEntry> roasToBeFiltered = null;
         long now = System.currentTimeMillis();
         for( int i = 0; i < overlaps.size(); i++ ){
             Announcement announcement = overlaps.get(i).getAnnouncement();
             if((now - announcement.getCreated_at().getTime()) / DAY > days){
-                List<Roa> roasToBeFiltered = overlaps.get(i).getRoas();
-                Map<Roa, Integer> roasToBeFilteredWithKeys = overlaps.get(i).getRoasWithId();
-                for(int j = 0; j < roasToBeFiltered.size(); j++){
-//                    if(this.roas.contains(roas.get(j))) {
-//                        this.roas.get(this.roas.indexOf(roas.get(j))).setFilter();
+//                List<Roa> roasToBeFiltered = overlaps.get(i).getRoas();
+//                Map<Roa, Integer> roasToBeFilteredWithKeys = overlaps.get(i).getRoasWithId();
+//                for(int j = 0; j < roasToBeFiltered.size(); j++){
+////                    if(this.roas.contains(roas.get(j))) {
+////                        this.roas.get(this.roas.indexOf(roas.get(j))).setFilter();
+////                    }
+//                    if(roas.containsValue(roasToBeFiltered.get(j))) {
+//                        roas.get(roasToBeFilteredWithKeys.get(roasToBeFiltered.get(j)));
 //                    }
-                    if(roas.containsValue(roasToBeFiltered.get(j))) {
-                        roas.get(roasToBeFilteredWithKeys.get(roasToBeFiltered.get(j)));
-                    }
+//                }
+                roasToBeFiltered = overlaps.get(i).getRoaEntrys();
+                for(int j = 0; j < roasToBeFiltered.size(); j++){
+                    roas.get(roasToBeFiltered.get(j).getRoaId()).setFilter();
                 }
+//
             }
         }
     }
@@ -410,9 +419,11 @@ public class ConflictHandler {
         settings[1] = 1;
         try {
             ResultSet rs = connection.createStatement().executeQuery("SELECT value FROM settings " +
-                    "WHERE key IN ('conflictHandler.heuristic', 'conflictHandler.thresholdDays')");
+                    "WHERE key = 'conflictHandler.heuristic'");
             rs.next();
             settings[0] = Integer.parseInt(rs.getString("value"));
+            rs = connection.createStatement().executeQuery("SELECT value FROM settings " +
+                    "WHERE key = 'conflictHandler.thresholdDays'");
             rs.next();
             settings[1] = Integer.parseInt(rs.getString("value"));
         } catch (SQLException | NumberFormatException e) {
@@ -479,7 +490,11 @@ public class ConflictHandler {
             PreparedStatement psFilter =  connection.prepareStatement(updateFilter);
             ResultSet rs;
             Statement stmt = connection.createStatement();
+            int counter = 0;
             for(Roa roa : roas.values()){
+                if (counter % 500 == 0){
+                    System.out.println(counter);
+                }
                 ps.setLong(1, roa.getAsn());
                 ps.setObject(2, roa.getPrefix(), OTHER);
                 ps.setInt(3, roa.getMax_length());
@@ -499,9 +514,12 @@ public class ConflictHandler {
                        psFilter.addBatch();
                    }
                 }
+                counter++;
 
             }
+            System.out.println("Execute first batch");
             ps.executeBatch();
+            System.out.println("Execute second batch");
             psFilter.executeBatch();
         }catch(Exception e){
             throw new ExecutionException(e);
